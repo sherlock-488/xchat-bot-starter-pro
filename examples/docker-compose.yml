@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  xchat-bot:
+    build: ..
+    image: xchat-bot-starter-pro:latest
+    restart: unless-stopped
+    environment:
+      # Required — set these in your .env or CI secrets
+      XCHAT_CONSUMER_KEY: ${XCHAT_CONSUMER_KEY}
+      XCHAT_CONSUMER_SECRET: ${XCHAT_CONSUMER_SECRET}
+      XCHAT_ACCESS_TOKEN: ${XCHAT_ACCESS_TOKEN}
+      XCHAT_ACCESS_TOKEN_SECRET: ${XCHAT_ACCESS_TOKEN_SECRET}
+
+      # Transport
+      XCHAT_TRANSPORT_MODE: webhook
+      XCHAT_WEBHOOK_HOST: 0.0.0.0
+      XCHAT_WEBHOOK_PORT: "8080"
+      XCHAT_WEBHOOK_PUBLIC_URL: ${XCHAT_WEBHOOK_PUBLIC_URL}
+
+      # Crypto
+      XCHAT_CRYPTO_MODE: stub  # Change to 'real' after xchat unlock
+
+      # Logging
+      XCHAT_LOG_FORMAT: json
+      XCHAT_LOG_LEVEL: INFO
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      # Mount state.json for real crypto mode
+      # - ./state.json:/app/state.json:ro
+      - ./bots:/app/bots:ro
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8080/healthz').raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    command: ["xchat", "run", "--transport", "webhook", "--bot", "bots.echo_bot:EchoBot"]

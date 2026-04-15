@@ -1,0 +1,8 @@
+{
+  "private_keys": {
+    "1": "STUB_PRIVATE_KEY_v1_base64encoded==",
+    "2": "STUB_PRIVATE_KEY_v2_base64encoded=="
+  },
+  "signing_key_version": "2",
+  "user_id": "444555666"
+}

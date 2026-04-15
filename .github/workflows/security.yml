@@ -1,0 +1,46 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # Every Monday at 9am UTC
+  workflow_dispatch:
+
+jobs:
+  pip-audit:
+    name: Dependency vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit
+        run: pip install pip-audit uv
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run pip-audit
+        run: uv run pip-audit
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for secrets in .gitignore
+        run: |
+          echo "Checking .gitignore for required secret exclusions..."
+          for pattern in ".env" "state.json" "tokens.json"; do
+            if ! grep -qF "$pattern" .gitignore; then
+              echo "ERROR: '$pattern' is not in .gitignore!"
+              exit 1
+            fi
+          done
+          echo "All secret patterns are in .gitignore."

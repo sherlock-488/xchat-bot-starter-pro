@@ -1,0 +1,45 @@
+# Secrets — NEVER include in Docker image
+.env
+state.json
+tokens.json
+*.key
+*.pem
+
+# Development
+.venv/
+venv/
+.uv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Tests
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Logs and recordings
+*.log
+logs/
+recordings/
+drafts/
+escalations/
+
+# Docker
+Dockerfile
+.dockerignore
+examples/

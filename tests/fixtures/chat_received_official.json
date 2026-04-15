@@ -1,0 +1,12 @@
+{
+  "data": {
+    "event_type": "chat.received",
+    "payload": {
+      "conversation_id": "STUB_CONV_111222333_444555666",
+      "encoded_event": "STUB_ENC_SGVsbG8gZnJvbSB4Y2hhdC1ib3Qtc3RhcnRlci1wcm8h",
+      "encrypted_conversation_key": "STUB_ENC_KEY_base64==",
+      "conversation_key_version": "1",
+      "conversation_token": "STUB_TOKEN_abc123"
+    }
+  }
+}

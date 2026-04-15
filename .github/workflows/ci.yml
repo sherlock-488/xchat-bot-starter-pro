@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Lint with ruff
+        run: uv run ruff check src/ tests/ bots/
+
+      - name: Format check with ruff
+        run: uv run ruff format --check src/ tests/ bots/
+
+      - name: Type check with pyright
+        run: uv run pyright src/
+        continue-on-error: true  # Don't fail CI on type errors during early development
+
+      - name: Run tests
+        run: uv run pytest tests/ -x --cov=src/xchat_bot --cov-report=xml --cov-report=term-missing
+        env:
+          XCHAT_CONSUMER_KEY: test_key
+          XCHAT_CONSUMER_SECRET: test_secret
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.11'
+        with:
+          file: coverage.xml
+          fail_ci_if_error: false
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --no-cache -t xchat-bot-starter-pro:test .
+
+      - name: Test Docker image
+        run: |
+          docker run --rm \
+            -e XCHAT_CONSUMER_KEY=test_key \
+            -e XCHAT_CONSUMER_SECRET=test_secret \
+            xchat-bot-starter-pro:test \
+            xchat version
