@@ -72,31 +72,9 @@ class WebhookTransport(Transport):
             port=self._settings.webhook_port,
         )
 
-        # Wrap handler to apply dedup + crypto before dispatching
-        async def enriched_handler(event: NormalizedEvent) -> None:
-            if self._deduplicator.check_and_mark(event.event_id):
-                log.debug("webhook_duplicate_event", event_id=event.event_id)
-                return
-
-            if event.encrypted and self._crypto:
-                enc = event.encrypted
-                result = self._crypto.decrypt(
-                    encoded_event=enc.encoded_event or enc.encrypted_content or "",
-                    encrypted_conversation_key=event.encrypted.encrypted_conversation_key,
-                )
-                event = event.model_copy(
-                    update={
-                        "plaintext": result.plaintext,
-                        "is_stub": event.is_stub or (result.mode == "stub"),
-                        "decrypt_notes": result.notes,
-                    }
-                )
-
-            await handler(event)
-
         app = create_app(
             consumer_secret=self._settings.consumer_secret.get_secret_value(),
-            handler=enriched_handler,
+            handler=self._make_enriched_handler(handler),
             normalizer=self._normalizer,
         )
 
@@ -123,15 +101,43 @@ class WebhookTransport(Transport):
         """Return the FastAPI app without starting the server.
 
         Useful for running with an external ASGI server (gunicorn, etc.)
+        The returned app applies the same dedup + crypto pipeline as run().
 
         Args:
             handler: Async callable that receives NormalizedEvent objects.
 
         Returns:
-            FastAPI application instance.
+            FastAPI application instance with full dedup+decrypt middleware.
         """
         return create_app(
             consumer_secret=self._settings.consumer_secret.get_secret_value(),
-            handler=handler,
+            handler=self._make_enriched_handler(handler),
             normalizer=self._normalizer,
         )
+
+    def _make_enriched_handler(self, handler: EventHandler) -> EventHandler:
+        """Wrap handler with dedup + crypto — shared by run() and get_app()."""
+        log = logger.bind(transport="webhook")
+
+        async def enriched_handler(event: NormalizedEvent) -> None:
+            if self._deduplicator.check_and_mark(event.event_id):
+                log.debug("webhook_duplicate_event", event_id=event.event_id)
+                return
+
+            if event.encrypted and self._crypto:
+                enc = event.encrypted
+                result = self._crypto.decrypt(
+                    encoded_event=enc.encoded_event or enc.encrypted_content or "",
+                    encrypted_conversation_key=event.encrypted.encrypted_conversation_key,
+                )
+                event = event.model_copy(
+                    update={
+                        "plaintext": result.plaintext,
+                        "is_stub": event.is_stub or (result.mode == "stub"),
+                        "decrypt_notes": result.notes,
+                    }
+                )
+
+            await handler(event)
+
+        return enriched_handler

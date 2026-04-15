@@ -6,21 +6,29 @@ Run `xchat doctor` to validate your configuration.
 
 Authentication model
 --------------------
-X Activity API uses two separate credentials:
+X Activity API uses three separate credential sets:
 
-1. App Bearer Token (``XCHAT_BEARER_TOKEN``)
+1. App credentials (``XCHAT_CONSUMER_KEY`` / ``XCHAT_CONSUMER_SECRET``)
+   - Used for webhook HMAC-SHA256 signature verification only.
+   - Also used as ``client_id`` / ``client_secret`` for OAuth 2.0 IF your
+     app does not have a separate OAuth 2.0 Client ID (see note below).
+
+2. App Bearer Token (``XCHAT_BEARER_TOKEN``)
    - Used by the Activity Stream transport to connect and receive events.
    - App-only credential; does not act on behalf of a user.
    - Generate in X Developer Portal → Keys and tokens → Bearer Token.
 
-2. OAuth 2.0 User Access Token (``XCHAT_USER_ACCESS_TOKEN``)
-   - Used by the Reply adapter to send DMs on behalf of the bot account.
-   - Obtained via ``xchat auth login`` (OAuth 2.0 PKCE flow).
-   - Stored in tokens.json after login.
+3. OAuth 2.0 Client credentials (``XCHAT_OAUTH_CLIENT_ID`` / ``XCHAT_OAUTH_CLIENT_SECRET``)
+   - Used by ``xchat auth login`` (PKCE flow) to obtain a user access token.
+   - In X Developer Portal, these appear as "OAuth 2.0 Client ID and Secret"
+     under your app's "Keys and tokens" tab — they are DIFFERENT from the
+     API Key & Secret (consumer key/secret).
+   - If ``XCHAT_OAUTH_CLIENT_ID`` is not set, auth login falls back to
+     ``XCHAT_CONSUMER_KEY`` as client_id (works for some app types but not all).
 
-Legacy OAuth 1.0a fields (``access_token`` / ``access_token_secret``) are
-kept for backward compatibility with older X API endpoints but are NOT used
-for the Activity Stream or reply flows.
+4. OAuth 2.0 User Access Token (``XCHAT_USER_ACCESS_TOKEN``)
+   - Used by the Reply adapter to send DMs on behalf of the bot account.
+   - Obtained via ``xchat auth login`` and stored in tokens.json.
 """
 
 from __future__ import annotations
@@ -45,6 +53,28 @@ class AppSettings(BaseSettings):
     # ── App credentials (required) ────────────────────────────────────────
     consumer_key: str = Field(..., description="X app consumer key (API key)")
     consumer_secret: SecretStr = Field(..., description="X app consumer secret")
+
+    # ── OAuth 2.0 Client credentials — used by auth login (PKCE flow) ──────
+    # These appear as "OAuth 2.0 Client ID and Secret" in X Developer Portal.
+    # They are DIFFERENT from the API Key & Secret (consumer_key/consumer_secret).
+    # If not set, auth login falls back to consumer_key as client_id.
+    oauth_client_id: str | None = Field(
+        None,
+        description=(
+            "OAuth 2.0 Client ID from X Developer Portal → your app → Keys and tokens. "
+            "DIFFERENT from the API Key (consumer_key). "
+            "Used by `xchat auth login` PKCE flow. "
+            "Falls back to consumer_key if not set."
+        ),
+    )
+    oauth_client_secret: SecretStr | None = Field(
+        None,
+        description=(
+            "OAuth 2.0 Client Secret from X Developer Portal. "
+            "DIFFERENT from the API Secret (consumer_secret). "
+            "Optional for public clients using PKCE."
+        ),
+    )
 
     # ── App Bearer Token — used by Activity Stream transport ──────────────
     bearer_token: SecretStr | None = Field(

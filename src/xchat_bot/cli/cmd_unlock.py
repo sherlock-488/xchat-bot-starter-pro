@@ -1,4 +1,9 @@
-"""xchat unlock — retrieve E2EE private keys and write to state.json."""
+"""xchat unlock — retrieve E2EE private keys and write to state.json.
+
+EXPERIMENTAL: The unlock API is not yet officially documented.
+This command creates a placeholder state.json.
+For real E2EE keys, run xchat-bot-python's unlock flow and copy state.json here.
+"""
 
 from __future__ import annotations
 
@@ -17,11 +22,18 @@ def unlock(
     ),
     force: bool = typer.Option(False, "--force", help="Overwrite existing state.json"),
 ) -> None:
-    """Retrieve E2EE private keys and write to state.json.
+    """Write a placeholder state.json for E2EE key material.
 
-    EXPERIMENTAL: The unlock API is observed from xchat-bot-python.
-    Run `xchat-bot-python unlock` to generate a real state.json,
-    then use it with this starter kit.
+    EXPERIMENTAL: The real unlock API is not yet officially documented and
+    chat-xdk has not been officially released. This command creates a minimal
+    state.json so the rest of the bot can start in crypto=real mode.
+
+    For real E2EE keys:
+      1. Run xchat-bot-python's unlock flow (see https://github.com/xdevplatform/xchat-bot-python)
+      2. Copy the resulting state.json into your project directory.
+
+    Requires:
+      - XCHAT_USER_ACCESS_TOKEN set (run `xchat auth login` first)
     """
     from xchat_bot.auth.unlock import run_unlock_flow
     from xchat_bot.config.settings import AppSettings
@@ -34,28 +46,32 @@ def unlock(
         console.print(f"[red]Configuration error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    if not settings.access_token:
-        console.print("[red]Not authenticated.[/red] Run [cyan]xchat auth login[/cyan] first.")
+    if not settings.user_access_token:
+        console.print(
+            "[red]Not authenticated.[/red] Run [cyan]xchat auth login[/cyan] first to obtain "
+            "an OAuth 2.0 user access token."
+        )
         raise typer.Exit(code=1)
 
-    console.print(f"\n[bold]xchat unlock[/bold] — writing to {state_file}\n")
-    console.print("[yellow]EXPERIMENTAL:[/yellow] Unlock API follows xchat-bot-python pattern.")
+    console.print(f"\n[bold]xchat unlock[/bold] — writing to {state_file}")
+    console.print(
+        "[yellow]EXPERIMENTAL:[/yellow] This creates a placeholder state.json. "
+        "Real E2EE key retrieval is pending official API documentation."
+    )
+    console.print()
 
     async def _run() -> None:
         await run_unlock_flow(
-            access_token=settings.access_token or "",
-            consumer_key=settings.consumer_key,
-            consumer_secret=settings.consumer_secret.get_secret_value(),
-            access_token_secret=(
-                settings.access_token_secret.get_secret_value()
-                if settings.access_token_secret
-                else ""
-            ),
+            user_access_token=settings.user_access_token.get_secret_value(),  # type: ignore[union-attr]
             state_file=state_file,
             force=force,
         )
         console.print(f"[green]✓[/green] state.json written to {state_file}")
         console.print("[dim]Note: state.json contains private keys — never commit to git.[/dim]")
+        console.print()
+        console.print(
+            "For real E2EE keys, see: [cyan]https://github.com/xdevplatform/xchat-bot-python[/cyan]"
+        )
 
     try:
         asyncio.run(_run())

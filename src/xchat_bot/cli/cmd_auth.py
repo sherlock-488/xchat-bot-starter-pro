@@ -57,15 +57,28 @@ def login(
         console.print("Run [cyan]xchat doctor[/cyan] to diagnose issues.")
         raise typer.Exit(code=1) from exc
 
+    # Resolve OAuth 2.0 client_id: prefer XCHAT_OAUTH_CLIENT_ID, fall back to consumer_key
+    client_id = settings.oauth_client_id or settings.consumer_key
+    using_fallback = not settings.oauth_client_id
+    if using_fallback:
+        console.print(
+            "[yellow]Note:[/yellow] XCHAT_OAUTH_CLIENT_ID is not set. "
+            "Falling back to XCHAT_CONSUMER_KEY as client_id.\n"
+            "  In X Developer Portal, the OAuth 2.0 Client ID is listed separately from\n"
+            "  the API Key under 'Keys and tokens'. Set XCHAT_OAUTH_CLIENT_ID for best results."
+        )
+        console.print()
+
     console.print("\n[bold]xchat auth login[/bold] (OAuth 2.0 PKCE)\n")
-    console.print(f"  Client ID  : [cyan]{settings.consumer_key}[/cyan]")
+    fallback_note = "  [dim](fallback: using XCHAT_CONSUMER_KEY)[/dim]" if using_fallback else ""
+    console.print(f"  Client ID  : [cyan]{client_id}[/cyan]{fallback_note}")
     console.print(f"  Redirect   : [cyan]{settings.oauth_redirect_uri}[/cyan]")
     console.print(f"  Scopes     : [cyan]{scopes}[/cyan]")
     console.print()
 
     async def _run() -> None:
         token_resp = await run_oauth_flow(
-            client_id=settings.consumer_key,
+            client_id=client_id,
             redirect_uri=settings.oauth_redirect_uri,
             scopes=scopes,
         )

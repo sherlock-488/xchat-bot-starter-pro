@@ -1,13 +1,22 @@
 """
 Key unlock flow — retrieves E2EE private keys from X API.
 
-EXPERIMENTAL: The exact unlock API endpoint and payload format are observed
-from xchat-bot-python but not yet fully documented in official X developer docs.
-This implementation follows the xchat-bot-python pattern.
+EXPERIMENTAL STATUS
+-------------------
+The unlock API endpoint and payload format are observed from xchat-bot-python
+but are NOT yet fully documented in official X developer docs.
+chat-xdk has not been officially released as a stable library.
 
-The unlock flow:
-  1. Call X API to get the bot's current E2EE key material
-  2. Write private keys to state.json (never commit to git)
+Current behavior:
+  - Creates a minimal state.json placeholder (private_keys will be empty).
+  - Does NOT make a real API call — the endpoint is not yet confirmed.
+  - For a real state.json: run xchat-bot-python's unlock flow and copy the
+    resulting state.json into your project directory.
+
+When the official unlock API is documented:
+  1. Replace the placeholder body with the real API call.
+  2. Parse the response to extract private_keys.
+  3. Remove the EXPERIMENTAL warning from this docstring.
 
 Run with: xchat unlock
 """
@@ -22,39 +31,32 @@ from xchat_bot.state.manager import StateManager
 
 logger = structlog.get_logger(__name__)
 
-# OBSERVED: Endpoint from xchat-bot-python. May change when officially documented.
-# Marked as EXPERIMENTAL.
+# EXPERIMENTAL: Endpoint observed from xchat-bot-python. Not yet officially documented.
 _UNLOCK_ENDPOINT = "https://api.x.com/2/dm_conversations/with/:participant_id/dm_events"
 
 
 async def run_unlock_flow(
-    access_token: str,
-    consumer_key: str,
-    consumer_secret: str,
-    access_token_secret: str,
+    user_access_token: str,
     state_file: Path = Path("state.json"),
     *,
     force: bool = False,
 ) -> StateManager:
-    """Retrieve E2EE private keys and write to state.json.
+    """Write a placeholder state.json for E2EE key material.
 
-    EXPERIMENTAL: The exact API call is observed from xchat-bot-python.
-    This will be updated when the official unlock API is documented.
+    EXPERIMENTAL: Real key retrieval is a placeholder pending official
+    documentation of the unlock API and stable release of chat-xdk.
 
     Args:
-        access_token: OAuth 1.0a access token.
-        consumer_key: X app consumer key.
-        consumer_secret: X app consumer secret.
-        access_token_secret: OAuth 1.0a access token secret.
+        user_access_token: OAuth 2.0 user access token (from `xchat auth login`).
+                           Reserved for the real implementation — not used yet.
         state_file: Where to write state.json.
         force: If True, overwrite existing state.json.
 
     Returns:
-        Loaded StateManager with the new keys.
+        StateManager pointing to the written file.
 
     Raises:
         FileExistsError: If state_file exists and force=False.
-        RuntimeError: If the unlock API call fails.
     """
     log = logger.bind(state_file=str(state_file))
 
@@ -65,22 +67,20 @@ async def run_unlock_flow(
         )
 
     log.info("unlock_starting")
-
-    # PLACEHOLDER: Real unlock API call
-    # The actual implementation depends on the officially documented unlock endpoint.
-    # This follows the pattern observed in xchat-bot-python.
     log.warning(
         "unlock_experimental",
         message=(
-            "EXPERIMENTAL: The unlock API endpoint is not yet fully documented. "
-            "This is a placeholder implementation. "
-            "Run xchat-bot-python's unlock flow to generate state.json, "
-            "then use it with this starter kit."
+            "EXPERIMENTAL: The unlock API is not yet officially documented and "
+            "chat-xdk has not been officially released. "
+            "This creates an empty state.json placeholder. "
+            "For real E2EE keys: run xchat-bot-python's unlock flow and copy "
+            "the resulting state.json here."
         ),
     )
 
-    # For now, create a minimal state.json structure
-    # In production, this would be populated by the real unlock API response
+    # Placeholder: create minimal state.json
+    # Real implementation will call _UNLOCK_ENDPOINT with user_access_token
+    # and parse the response to populate private_keys.
     manager = StateManager(state_file)
     manager.save()
 

@@ -56,6 +56,14 @@ def create(
         "--event-type",
         help="Event type to subscribe to (e.g. chat.received, chat.sent)",
     ),
+    user_id: str = typer.Option(
+        ...,
+        "--user-id",
+        help=(
+            "Your bot's X user ID (numeric). Required by the filter field. "
+            "Find it at: https://developer.x.com/en/docs/twitter-api/users/lookup/api-reference"
+        ),
+    ),
     tag: str | None = typer.Option(
         None,
         "--tag",
@@ -69,24 +77,29 @@ def create(
 ) -> None:
     """Create an Activity API subscription (POST /2/activity/subscriptions).
 
-    This tells X which event types to deliver to your bot. For webhook mode,
-    associate with a webhook ID. For stream mode, the subscription filters
-    what appears in your stream.
+    This tells X which event types to deliver to your bot. The filter.user_id
+    field is required by the API to scope events to your bot account.
 
     Common event types:
-      chat.received   — incoming DM (the main one for bots)
-      chat.sent       — outgoing DM confirmation
-      conversation.joined — joined a conversation
+      chat.received          — incoming DM (the main one for bots)
+      chat.sent              — outgoing DM confirmation
+      chat.conversation_join — joined a conversation
 
     Prerequisites:
       - XCHAT_BEARER_TOKEN set (app Bearer Token)
       - For webhook mode: register a webhook first with:
           xchat webhook register --url https://...
+
+    Example:
+      xchat subscriptions create --user-id 123456789 --event-type chat.received
     """
     _load_dotenv()
     headers = _bearer_headers()
 
-    body: dict[str, str] = {"event_type": event_type}
+    body: dict[str, object] = {
+        "event_type": event_type,
+        "filter": {"user_id": user_id},
+    }
     if tag:
         body["tag"] = tag
     if webhook_id:
@@ -94,6 +107,7 @@ def create(
 
     console.print("\n[bold]xchat subscriptions create[/bold]")
     console.print(f"  Event type : [cyan]{event_type}[/cyan]")
+    console.print(f"  User ID    : [cyan]{user_id}[/cyan]")
     if tag:
         console.print(f"  Tag        : [cyan]{tag}[/cyan]")
     if webhook_id:
@@ -113,7 +127,13 @@ def create(
 
     if resp.status_code in (200, 201):
         data = resp.json()
-        sub_id = data.get("data", {}).get("id") or data.get("id", "")
+        # Official response uses subscription_id, fall back to id for compatibility
+        sub_id = (
+            data.get("data", {}).get("subscription_id")
+            or data.get("data", {}).get("id")
+            or data.get("subscription_id")
+            or data.get("id", "")
+        )
         console.print("[green]✓[/green] Subscription created.")
         if sub_id:
             console.print(f"  Subscription ID: [cyan]{sub_id}[/cyan]")
@@ -155,7 +175,7 @@ def list_subscriptions() -> None:
         return
 
     for sub in subs:
-        sub_id = sub.get("id", "?")
+        sub_id = sub.get("subscription_id") or sub.get("id", "?")
         event_type = sub.get("event_type", "?")
         tag = sub.get("tag", "")
         tag_str = f"  [dim]({tag})[/dim]" if tag else ""

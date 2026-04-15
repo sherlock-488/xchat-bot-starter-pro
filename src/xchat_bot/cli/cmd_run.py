@@ -9,6 +9,8 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from xchat_bot.config.settings import AppSettings
+
 console = Console()
 
 
@@ -42,14 +44,17 @@ def run(
     """
     _load_dotenv()
 
-    from xchat_bot.config.settings import AppSettings
-
     try:
         settings = AppSettings()  # type: ignore[call-arg]
     except Exception as exc:
         console.print(f"[red]Configuration error:[/red] {exc}")
         console.print("Run [cyan]xchat doctor[/cyan] to diagnose issues.")
         raise typer.Exit(code=1) from exc
+
+    # If user_access_token is not in env/.env, try tokens.json as fallback.
+    # This ensures `xchat run` works even when --no-update-env was used during login.
+    if not settings.user_access_token:
+        settings = _inject_token_from_store(settings)
 
     # Apply CLI overrides
     if transport:
@@ -85,9 +90,8 @@ def run(
     asyncio.run(_run_bot(bot_instance, settings))
 
 
-def _load_bot(bot_path: str, settings: object) -> object:
+def _load_bot(bot_path: str, settings: AppSettings) -> object:
     """Load bot class from module:ClassName path."""
-    from xchat_bot.config.settings import AppSettings
     from xchat_bot.reply.adapter import LoggingReplyAdapter
     from xchat_bot.reply.x_api import XApiReplyAdapter
 
@@ -99,7 +103,6 @@ def _load_bot(bot_path: str, settings: object) -> object:
         console.print(f"[red]Failed to load bot {bot_path!r}:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    assert isinstance(settings, AppSettings)
     reply = XApiReplyAdapter(settings) if settings.user_access_token else LoggingReplyAdapter()
     if not settings.user_access_token:
         console.print(
@@ -110,9 +113,8 @@ def _load_bot(bot_path: str, settings: object) -> object:
     return bot_class(settings=settings, reply=reply)
 
 
-async def _run_bot(bot: object, settings: object) -> None:
+async def _run_bot(bot: object, settings: AppSettings) -> None:
     """Initialize transport and run bot."""
-    from xchat_bot.config.settings import AppSettings
     from xchat_bot.crypto.real import RealCrypto
     from xchat_bot.crypto.stub import StubCrypto
     from xchat_bot.events.dedup import EventDeduplicator
@@ -121,7 +123,6 @@ async def _run_bot(bot: object, settings: object) -> None:
     from xchat_bot.transport.stream import ActivityStreamTransport
     from xchat_bot.transport.webhook import WebhookTransport
 
-    assert isinstance(settings, AppSettings)
     configure_logging(settings.log_level, settings.log_format)
 
     normalizer = EventNormalizer()
@@ -153,6 +154,36 @@ async def _run_bot(bot: object, settings: object) -> None:
     finally:
         await bot.on_stop()
         await transport.stop()
+
+
+def _inject_token_from_store(settings: AppSettings) -> AppSettings:
+    """If user_access_token is absent from env, load it from tokens.json.
+
+    This ensures xchat run works even when --no-update-env was used during
+    `xchat auth login`.
+    """
+    from pydantic import SecretStr
+
+    from xchat_bot.auth.token_store import TokenStore
+
+    store = TokenStore(settings.data_dir)
+    tokens = store.load()
+    if not tokens:
+        return settings
+
+    access_token = tokens.get("access_token")
+    refresh_token = tokens.get("refresh_token")
+    if not access_token:
+        return settings
+
+    console.print(
+        "[dim]user_access_token loaded from tokens.json "
+        "(set XCHAT_USER_ACCESS_TOKEN in .env to avoid this)[/dim]"
+    )
+    updates: dict[str, object] = {"user_access_token": SecretStr(access_token)}
+    if refresh_token and not settings.user_refresh_token:
+        updates["user_refresh_token"] = SecretStr(refresh_token)
+    return settings.model_copy(update=updates)
 
 
 def _load_dotenv() -> None:

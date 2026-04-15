@@ -15,7 +15,12 @@ console = Console()
 
 
 def _check(label: str, ok: bool, fix: str = "") -> dict[str, object]:
-    return {"label": label, "ok": ok, "fix": fix}
+    return {"label": label, "ok": ok, "warn": False, "fix": fix}
+
+
+def _check_warn(label: str, ok: bool, fix: str = "") -> dict[str, object]:
+    """Like _check but failure is a warning (yellow), not an error (red)."""
+    return {"label": label, "ok": ok, "warn": True, "fix": fix}
 
 
 def _run_checks(check_connectivity: bool = False) -> list[dict[str, object]]:
@@ -85,14 +90,16 @@ def _run_checks(check_connectivity: bool = False) -> list[dict[str, object]]:
             )
         )
 
-    # 5c. XCHAT_USER_ACCESS_TOKEN set (required for sending replies)
+    # 5c. XCHAT_USER_ACCESS_TOKEN set (needed for DM replies, optional for receive-only)
+    # This is a WARNING, not a hard failure — the bot can still receive events without it,
+    # using LoggingReplyAdapter. Only xchat auth login is needed to enable actual replies.
     user_access_token = os.getenv("XCHAT_USER_ACCESS_TOKEN", "")
     results.append(
-        _check(
-            "XCHAT_USER_ACCESS_TOKEN is set (required for sending DM replies)",
+        _check_warn(
+            "XCHAT_USER_ACCESS_TOKEN is set (needed for sending DM replies)",
             bool(user_access_token),
             "Run: xchat auth login  to obtain an OAuth 2.0 user access token. "
-            "Without this, the bot can receive messages but cannot reply.",
+            "Without this, the bot will receive events but replies will only be logged.",
         )
     )
 
@@ -235,10 +242,15 @@ def doctor(
     table.add_column("Fix", style="dim")
 
     failures = 0
+    warnings = 0
     for r in results:
         ok = r["ok"]
+        is_warn = r.get("warn", False)
         if ok:
             status = "[green]✓ PASS[/green]"
+        elif is_warn:
+            status = "[yellow]⚠ WARN[/yellow]"
+            warnings += 1
         else:
             status = "[red]✗ FAIL[/red]"
             failures += 1
@@ -251,9 +263,16 @@ def doctor(
 
     console.print(table)
 
-    if failures == 0:
+    if failures == 0 and warnings == 0:
         console.print("\n[bold green]All checks passed![/bold green]")
+    elif failures == 0:
+        console.print(f"\n[bold yellow]{warnings} warning(s).[/bold yellow]")
+        console.print(
+            "Warnings are non-blocking — the bot can start, but some features may be unavailable."
+        )
     else:
         console.print(f"\n[bold red]{failures} check(s) failed.[/bold red]")
+        if warnings:
+            console.print(f"[yellow]{warnings} warning(s).[/yellow]")
         console.print("Run [cyan]xchat init[/cyan] to fix .gitignore issues automatically.\n")
         raise typer.Exit(code=1)
