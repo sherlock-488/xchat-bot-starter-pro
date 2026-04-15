@@ -21,14 +21,13 @@ Usage::
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import hmac
-import base64
 import secrets
 import time
 import urllib.parse
 import webbrowser
-from typing import Any
 
 import httpx
 
@@ -187,9 +186,9 @@ async def run_oauth_flow(
     # Step 3: Start local callback server
     verifier_future: asyncio.Future[str] = asyncio.get_event_loop().create_future()
 
+    import uvicorn
     from fastapi import FastAPI
     from fastapi.responses import HTMLResponse
-    import uvicorn
 
     callback_app = FastAPI()
 
@@ -207,7 +206,7 @@ async def run_oauth_flow(
     server_task = asyncio.create_task(server.serve())
 
     # Step 4: Open browser
-    print(f"\nOpening browser for X authorization...")
+    print("\nOpening browser for X authorization...")
     print(f"If the browser doesn't open, visit:\n  {authorize_url}\n")
     if open_browser:
         webbrowser.open(authorize_url)
@@ -215,7 +214,7 @@ async def run_oauth_flow(
     # Step 5: Wait for callback
     try:
         oauth_verifier = await asyncio.wait_for(verifier_future, timeout=timeout)
-    except asyncio.TimeoutError as exc:
+    except TimeoutError as exc:
         server.should_exit = True
         raise TimeoutError(
             f"OAuth authorization timed out after {timeout}s. "

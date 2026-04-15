@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -44,15 +45,17 @@ def replay_run(
             console.print("[red]--sign requires XCHAT_CONSUMER_SECRET to be set[/red]")
             raise typer.Exit(code=1)
 
-    async def _run() -> None:
+    async def _run() -> list[dict[str, Any]]:
         import httpx
-        results = []
+        results: list[dict[str, Any]] = []
         async with httpx.AsyncClient(timeout=10.0) as client:
             for event in events:
                 payload = json.dumps(event).encode()
                 headers: dict[str, str] = {"Content-Type": "application/json"}
                 if sign and consumer_secret:
-                    headers["x-twitter-webhooks-signature"] = generate_signature(payload, consumer_secret)
+                    headers["x-twitter-webhooks-signature"] = generate_signature(
+                        payload, consumer_secret
+                    )
 
                 event_type = (
                     event.get("data", {}).get("event_type")
@@ -129,9 +132,13 @@ def replay_diff(
                 payload = json.dumps(event).encode()
                 headers = {"Content-Type": "application/json"}
 
-                async def _post(url: str) -> tuple[int | None, str]:
+                async def _post(
+                    url: str,
+                    _payload: bytes = payload,
+                    _headers: dict[str, str] = headers,
+                ) -> tuple[int | None, str]:
                     try:
-                        r = await client.post(url, content=payload, headers=headers)
+                        r = await client.post(url, content=_payload, headers=_headers)
                         return r.status_code, r.text[:200]
                     except Exception as exc:
                         return None, str(exc)
@@ -140,8 +147,11 @@ def replay_diff(
                 c_status, c_body = await _post(candidate)
                 identical = (b_status, b_body) == (c_status, c_body)
 
+                event_type = (
+                    event.get("data", {}).get("event_type") or event.get("event_type", "?")
+                )
                 results.append({
-                    "event_type": event.get("data", {}).get("event_type") or event.get("event_type", "?"),
+                    "event_type": event_type,
                     "baseline": f"{b_status} {b_body[:50]}",
                     "candidate": f"{c_status} {c_body[:50]}",
                     "identical": identical,
@@ -191,13 +201,13 @@ def replay_export(
     console.print("Use [cyan]xchat inspect[/cyan] for local fixture inspection.")
 
 
-def _load_fixture(fixture: Path) -> list[dict[str, object]]:
+def _load_fixture(fixture: Path) -> list[dict[str, Any]]:
     if not fixture.exists():
         console.print(f"[red]File not found:[/red] {fixture}")
         raise typer.Exit(code=1)
 
     content = fixture.read_text(encoding="utf-8")
-    events: list[dict[str, object]] = []
+    events: list[dict[str, Any]] = []
 
     if fixture.suffix == ".jsonl":
         for line in content.splitlines():
@@ -205,7 +215,7 @@ def _load_fixture(fixture: Path) -> list[dict[str, object]]:
             if line:
                 events.append(json.loads(line))
     else:
-        data = json.loads(content)
+        data: Any = json.loads(content)
         if isinstance(data, list):
             events = data
         else:

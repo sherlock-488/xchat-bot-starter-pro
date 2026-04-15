@@ -127,7 +127,7 @@ class RealCrypto:
                 "chat-xdk has not been officially released as a stable library. "
                 "This will be implemented when the official API is published. "
                 f"Key version available: {key_version}. "
-                "Track progress at: https://github.com/twitterdev/xchat-bot-python"
+                "Track progress at: https://github.com/xdevplatform/xchat-bot-python"
             ),
         )
 

@@ -4,7 +4,7 @@ CRC challenge handler for X webhook verification.
 X sends a GET request with a crc_token query parameter to verify your webhook URL.
 You must respond with an HMAC-SHA256 signature of the token using your consumer secret.
 
-Reference: https://developer.twitter.com/en/docs/twitter-api/enterprise/account-activity-api/guides/securing-webhooks
+Reference: https://docs.x.com/resources/fundamentals/authentication/guides/securing-webhooks
 """
 
 from __future__ import annotations

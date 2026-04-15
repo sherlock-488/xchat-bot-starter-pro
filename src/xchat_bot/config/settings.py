@@ -3,6 +3,24 @@ Application settings — loaded from environment variables and .env file.
 
 All settings use the XCHAT_ prefix.
 Run `xchat doctor` to validate your configuration.
+
+Authentication model
+--------------------
+X Activity API uses two separate credentials:
+
+1. App Bearer Token (``XCHAT_BEARER_TOKEN``)
+   - Used by the Activity Stream transport to connect and receive events.
+   - App-only credential; does not act on behalf of a user.
+   - Generate in X Developer Portal → Keys and tokens → Bearer Token.
+
+2. OAuth 2.0 User Access Token (``XCHAT_USER_ACCESS_TOKEN``)
+   - Used by the Reply adapter to send DMs on behalf of the bot account.
+   - Obtained via ``xchat auth login`` (OAuth 2.0 PKCE flow).
+   - Stored in tokens.json after login.
+
+Legacy OAuth 1.0a fields (``access_token`` / ``access_token_secret``) are
+kept for backward compatibility with older X API endpoints but are NOT used
+for the Activity Stream or reply flows.
 """
 
 from __future__ import annotations
@@ -24,14 +42,45 @@ class AppSettings(BaseSettings):
         extra="ignore",
     )
 
-    # ── OAuth credentials ─────────────────────────────────────────────────
+    # ── App credentials (required) ────────────────────────────────────────
     consumer_key: str = Field(..., description="X app consumer key (API key)")
     consumer_secret: SecretStr = Field(..., description="X app consumer secret")
+
+    # ── App Bearer Token — used by Activity Stream transport ──────────────
+    bearer_token: SecretStr | None = Field(
+        None,
+        description=(
+            "X app Bearer Token. Used by the Activity Stream transport to connect "
+            "and receive events. Generate in X Developer Portal → Keys and tokens."
+        ),
+    )
+
+    # ── OAuth 2.0 User Access Token — used by Reply adapter ──────────────
+    user_access_token: SecretStr | None = Field(
+        None,
+        description=(
+            "OAuth 2.0 user access token for the bot account. Used to send DM replies. "
+            "Obtained via `xchat auth login` and stored in tokens.json."
+        ),
+    )
+    user_refresh_token: SecretStr | None = Field(
+        None,
+        description="OAuth 2.0 refresh token for renewing user_access_token.",
+    )
+
+    # ── Legacy OAuth 1.0a tokens (kept for compatibility) ─────────────────
+    # These are NOT used for Activity Stream or DM replies in the XAA flow.
+    # Kept for any OAuth 1.0a-only endpoints you may need.
     access_token: str | None = Field(
-        None, description="OAuth 1.0a access token (set after `xchat auth login`)"
+        None,
+        description=(
+            "Legacy OAuth 1.0a access token. "
+            "NOT used for Activity Stream or DM replies — use user_access_token instead."
+        ),
     )
     access_token_secret: SecretStr | None = Field(
-        None, description="OAuth 1.0a access token secret"
+        None,
+        description="Legacy OAuth 1.0a access token secret. See access_token note.",
     )
 
     # ── Transport ─────────────────────────────────────────────────────────
@@ -58,12 +107,13 @@ class AppSettings(BaseSettings):
         "http://127.0.0.1:7171/callback",
         description=(
             "OAuth callback URL. MUST use 127.0.0.1, not 'localhost'. "
-            "X treats them as different origins. Must match your X Developer Portal setting exactly."
+            "X treats them as different origins. "
+            "Must match your X Developer Portal setting exactly."
         ),
     )
     oauth_scopes: list[str] = Field(
         default_factory=list,
-        description="OAuth scopes to request. Consult X developer docs for valid values.",
+        description="OAuth 2.0 scopes to request. Consult X developer docs for valid values.",
     )
 
     # ── State / secrets files ─────────────────────────────────────────────
@@ -137,7 +187,7 @@ class AppSettings(BaseSettings):
         return v.upper()
 
     @model_validator(mode="after")
-    def expand_data_dir(self) -> "AppSettings":
+    def expand_data_dir(self) -> AppSettings:
         self.data_dir = self.data_dir.expanduser()
         return self
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock
@@ -94,12 +95,12 @@ def make_event(
     event_id: str = "test_event_001",
 ) -> NormalizedEvent:
     """Factory for NormalizedEvent objects in tests."""
-    from datetime import datetime, timezone
+    from datetime import datetime
     return NormalizedEvent(
         event_id=event_id,
         event_type=event_type,
         schema_source="demo",
-        received_at=datetime.now(timezone.utc),
+        received_at=datetime.now(UTC),
         conversation_id=conversation_id,
         sender_id=sender_id,
         plaintext=plaintext,

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
-
 from bots.echo_bot import EchoBot
+
 from tests.conftest import make_event
 
 

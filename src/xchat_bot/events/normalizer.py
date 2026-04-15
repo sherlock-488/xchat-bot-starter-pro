@@ -13,14 +13,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from xchat_bot.events.models import EncryptedPayload, NormalizedEvent
 
 
 def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _stable_event_id(parts: list[str]) -> str:

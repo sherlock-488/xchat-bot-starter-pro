@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import importlib
 from pathlib import Path
-from typing import Literal
 
 import typer
 from rich.console import Console
@@ -15,9 +14,12 @@ console = Console()
 
 def run(
     bot: str = typer.Option(
-        "bots.echo_bot:EchoBot",
+        "xchat_bot.examples.echo_bot:EchoBot",
         "--bot",
-        help="Bot module path, e.g. bots.echo_bot:EchoBot",
+        help=(
+            "Bot module path, e.g. xchat_bot.examples.echo_bot:EchoBot. "
+            "For a custom bot in the current directory: bots.my_bot:MyBot"
+        ),
     ),
     transport: str = typer.Option(
         "", "--transport", help="Override transport mode: stream or webhook"
@@ -35,9 +37,10 @@ def run(
     and starts processing events.
 
     Examples:
-        xchat run --bot bots.echo_bot:EchoBot
-        xchat run --transport webhook --bot bots.router_bot:RouterBot
-        xchat run --crypto real --bot bots.echo_bot:EchoBot
+        xchat run
+        xchat run --bot xchat_bot.examples.echo_bot:EchoBot
+        xchat run --transport webhook --bot xchat_bot.examples.router_bot:RouterBot
+        xchat run --bot bots.my_bot:MyBot   # custom bot in current directory
     """
     _load_dotenv()
 
@@ -48,12 +51,14 @@ def run(
     except Exception as exc:
         console.print(f"[red]Configuration error:[/red] {exc}")
         console.print("Run [cyan]xchat doctor[/cyan] to diagnose issues.")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc
 
     # Apply CLI overrides
     if transport:
         if transport not in ("stream", "webhook"):
-            console.print(f"[red]Invalid transport:[/red] {transport!r}. Use 'stream' or 'webhook'.")
+            console.print(
+                f"[red]Invalid transport:[/red] {transport!r}. Use 'stream' or 'webhook'."
+            )
             raise typer.Exit(code=1)
         settings = settings.model_copy(update={"transport_mode": transport})
     if crypto:
@@ -69,7 +74,7 @@ def run(
     # Load bot class
     bot_instance = _load_bot(bot, settings)
 
-    console.print(f"\n[bold]xchat run[/bold]")
+    console.print("\n[bold]xchat run[/bold]")
     console.print(f"  Bot: [cyan]{bot}[/cyan]")
     console.print(f"  Transport: [cyan]{settings.transport_mode}[/cyan]")
     console.print(f"  Crypto: [cyan]{settings.crypto_mode}[/cyan]")
@@ -92,12 +97,15 @@ def _load_bot(bot_path: str, settings: object) -> object:
         bot_class = getattr(module, class_name)
     except (ValueError, ImportError, AttributeError) as exc:
         console.print(f"[red]Failed to load bot {bot_path!r}:[/red] {exc}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc
 
     assert isinstance(settings, AppSettings)
-    reply = XApiReplyAdapter(settings) if settings.access_token else LoggingReplyAdapter()
-    if not settings.access_token:
-        console.print("[yellow]No access_token — using LoggingReplyAdapter (replies will be logged, not sent)[/yellow]")
+    reply = XApiReplyAdapter(settings) if settings.user_access_token else LoggingReplyAdapter()
+    if not settings.user_access_token:
+        console.print(
+            "[yellow]No user_access_token — using LoggingReplyAdapter "
+            "(replies will be logged, not sent). Run `xchat auth login` to enable replies.[/yellow]"
+        )
 
     return bot_class(settings=settings, reply=reply)
 
@@ -124,7 +132,7 @@ async def _run_bot(bot: object, settings: object) -> None:
             crypto = RealCrypto(settings.state_file)
         except FileNotFoundError as exc:
             console.print(f"[red]Crypto error:[/red] {exc}")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from exc
     else:
         crypto = StubCrypto()
 

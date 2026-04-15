@@ -16,7 +16,7 @@ based on observed behavior rather than fully documented official APIs.
 - Actual XChaCha20-Poly1305 decryption of real production messages
 - `event.plaintext` will be `None` for real encrypted payloads
 
-**Where to track:** https://github.com/twitterdev/xchat-bot-python
+**Where to track:** https://github.com/xdevplatform/xchat-bot-python
 
 ---
 

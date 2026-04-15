@@ -15,9 +15,7 @@ Run with: xchat unlock
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
-import httpx
 import structlog
 
 from xchat_bot.state.manager import StateManager
@@ -26,7 +24,7 @@ logger = structlog.get_logger(__name__)
 
 # OBSERVED: Endpoint from xchat-bot-python. May change when officially documented.
 # Marked as EXPERIMENTAL.
-_UNLOCK_ENDPOINT = "https://api.twitter.com/2/dm_conversations/with/:participant_id/dm_events"
+_UNLOCK_ENDPOINT = "https://api.x.com/2/dm_conversations/with/:participant_id/dm_events"
 
 
 async def run_unlock_flow(

@@ -1,9 +1,14 @@
 """
 XApiReplyAdapter — sends DM replies via X API.
 
-EXPERIMENTAL: The reply endpoint and payload format are observed from
-xchat-bot-python but not yet fully documented in official X developer docs.
-Treat the endpoint URL and request body as unstable until officially published.
+Authentication
+--------------
+Sending DM replies requires the **OAuth 2.0 user access token** for the bot
+account (``XCHAT_USER_ACCESS_TOKEN``), obtained via ``xchat auth login``.
+This is different from the app Bearer Token used by the Activity Stream.
+
+EXPERIMENTAL: The exact endpoint path and ``conversation_token`` field are
+observed from xchat-bot-python and may change when fully documented.
 
 Features:
   - Automatic retry with exponential backoff (tenacity)
@@ -14,6 +19,7 @@ Features:
 
 from __future__ import annotations
 
+import httpx
 import structlog
 from tenacity import (
     AsyncRetrying,
@@ -23,26 +29,29 @@ from tenacity import (
     wait_exponential,
 )
 
-import httpx
-
 from xchat_bot.config.settings import AppSettings
 from xchat_bot.reply.adapter import ReplyResult
 
 logger = structlog.get_logger(__name__)
 
-# OBSERVED: Reply endpoint from xchat-bot-python. May change when officially documented.
-# Marked as EXPERIMENTAL.
-_REPLY_ENDPOINT_TEMPLATE = "https://api.twitter.com/2/dm_conversations/{conversation_id}/messages"
+# X v2 DM conversations endpoint.
+# EXPERIMENTAL: Exact path and body format observed from xchat-bot-python.
+_REPLY_ENDPOINT_TEMPLATE = (
+    "https://api.x.com/2/dm_conversations/{conversation_id}/messages"
+)
 
 
 class XApiReplyAdapter:
     """Sends DM replies via X API with retry and rate limit handling.
 
-    EXPERIMENTAL: Endpoint and payload format observed from xchat-bot-python.
-    Will be updated when official reply API is documented.
+    Uses the OAuth 2.0 user access token (``settings.user_access_token``) to
+    send messages on behalf of the bot account.
+
+    EXPERIMENTAL: Endpoint and ``conversation_token`` field observed from
+    xchat-bot-python; will be updated when official reply API is fully documented.
 
     Args:
-        settings: Application settings (provides access_token and retry config).
+        settings: Application settings (provides user_access_token and retry config).
     """
 
     def __init__(self, settings: AppSettings) -> None:
@@ -56,7 +65,7 @@ class XApiReplyAdapter:
         reply_to_event_id: str | None = None,
         conversation_token: str | None = None,
     ) -> ReplyResult:
-        """Send a DM reply.
+        """Send a DM reply using the OAuth 2.0 user access token.
 
         EXPERIMENTAL: The request format follows xchat-bot-python observations.
 
@@ -75,11 +84,19 @@ class XApiReplyAdapter:
             reply_to_event_id=reply_to_event_id,
         )
 
-        access_token = self._settings.access_token
-        if not access_token:
+        user_token = (
+            self._settings.user_access_token.get_secret_value()
+            if self._settings.user_access_token
+            else None
+        )
+        if not user_token:
             return ReplyResult(
                 success=False,
-                error="No access_token configured. Run `xchat auth login` first.",
+                error=(
+                    "No user_access_token configured. "
+                    "Run `xchat auth login` to obtain an OAuth 2.0 user token. "
+                    "The Activity Stream Bearer Token cannot be used for sending replies."
+                ),
             )
 
         url = _REPLY_ENDPOINT_TEMPLATE.format(conversation_id=conversation_id)
@@ -93,7 +110,7 @@ class XApiReplyAdapter:
             body["conversation_token"] = conversation_token  # EXPERIMENTAL
 
         headers = {
-            "Authorization": f"Bearer {access_token}",
+            "Authorization": f"Bearer {user_token}",
             "Content-Type": "application/json",
         }
 
@@ -110,8 +127,17 @@ class XApiReplyAdapter:
                     result = await self._send_once(url, headers, body, log)
                     if result.success:
                         return result
-                    # Don't retry on 4xx (client errors)
-                    if result.error and ("4" in (result.error[:3] if result.error else "")):
+                    # Don't retry on 4xx client errors (only retry on 5xx / network errors)
+                    if result.error and (
+                        result.rate_limit_remaining == 0  # 429 rate limit
+                        or (
+                            "400" in result.error
+                            or "401" in result.error
+                            or "403" in result.error
+                            or "404" in result.error
+                            or "422" in result.error
+                        )
+                    ):
                         return result
         except RetryError as exc:
             return ReplyResult(

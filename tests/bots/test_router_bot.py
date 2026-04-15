@@ -5,8 +5,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-
 from bots.router_bot import RouterBot
+
 from tests.conftest import make_event
 
 
@@ -19,7 +19,8 @@ async def test_ping_command(router_bot, mock_reply) -> None:
     event = make_event(event_type="chat.received", plaintext="/ping")
     await router_bot.handle(event)
     mock_reply.send_reply.assert_called_once()
-    text = mock_reply.send_reply.call_args.kwargs.get("text") or mock_reply.send_reply.call_args.args[1]
+    call_args = mock_reply.send_reply.call_args
+    text = call_args.kwargs.get("text") or call_args.args[1]
     assert "pong" in text.lower()
 
 
@@ -27,7 +28,8 @@ async def test_help_command(router_bot, mock_reply) -> None:
     event = make_event(event_type="chat.received", plaintext="/help")
     await router_bot.handle(event)
     mock_reply.send_reply.assert_called_once()
-    text = mock_reply.send_reply.call_args.kwargs.get("text") or mock_reply.send_reply.call_args.args[1]
+    call_args = mock_reply.send_reply.call_args
+    text = call_args.kwargs.get("text") or call_args.args[1]
     assert "/ping" in text
 
 
@@ -35,7 +37,8 @@ async def test_unknown_command(router_bot, mock_reply) -> None:
     event = make_event(event_type="chat.received", plaintext="/unknown_cmd")
     await router_bot.handle(event)
     mock_reply.send_reply.assert_called_once()
-    text = mock_reply.send_reply.call_args.kwargs.get("text") or mock_reply.send_reply.call_args.args[1]
+    call_args = mock_reply.send_reply.call_args
+    text = call_args.kwargs.get("text") or call_args.args[1]
     assert "unknown" in text.lower() or "Unknown" in text
 
 
@@ -66,5 +69,6 @@ async def test_command_case_insensitive(router_bot, mock_reply) -> None:
     event = make_event(event_type="chat.received", plaintext="/PING")
     await router_bot.handle(event)
     mock_reply.send_reply.assert_called_once()
-    text = mock_reply.send_reply.call_args.kwargs.get("text") or mock_reply.send_reply.call_args.args[1]
+    call_args = mock_reply.send_reply.call_args
+    text = call_args.kwargs.get("text") or call_args.args[1]
     assert "pong" in text.lower()

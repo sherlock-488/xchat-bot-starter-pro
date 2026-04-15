@@ -8,7 +8,6 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.panel import Panel
-from rich.syntax import Syntax
 
 console = Console()
 
@@ -48,7 +47,7 @@ def inspect(
                 crypto = RealCrypto(state_file)
             except FileNotFoundError as exc:
                 console.print(f"[red]Crypto error:[/red] {exc}")
-                raise typer.Exit(code=1)
+                raise typer.Exit(code=1) from exc
         else:
             crypto = StubCrypto()
     else:

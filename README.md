@@ -2,7 +2,7 @@
 
 A production-grade starter kit for building XChat bots on the X Activity API.
 
-[![CI](https://github.com/YOUR_ORG/xchat-bot-starter-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_ORG/xchat-bot-starter-pro/actions/workflows/ci.yml)
+[![CI](https://github.com/sherlock-488/xchat-bot-starter-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/sherlock-488/xchat-bot-starter-pro/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -17,8 +17,9 @@ This starter kit follows current official examples and documentation. Some XChat
 | Feature | Status |
 |---------|--------|
 | CRC challenge + webhook signature | ✅ Documented, stable |
-| OAuth 1.0a flow | ✅ Documented, stable |
-| Activity Stream transport | ⚠️ Endpoint observed from xchat-bot-python |
+| OAuth 2.0 user token (reply) | ✅ Documented, stable |
+| App Bearer Token (stream) | ✅ Documented, stable |
+| Activity Stream transport | ✅ GET /2/activity/stream (official docs) |
 | Reply API | ⚠️ Endpoint/format observed, not yet fully documented |
 | E2EE decryption | ⚠️ EXPERIMENTAL — chat-xdk not yet officially released |
 | `conversation_token` field | ⚠️ EXPERIMENTAL — observed, not yet documented |
@@ -42,7 +43,7 @@ A starting point for teams building serious XChat bots. It gives you:
 - Not an official X SDK
 - Not a complete E2EE implementation (chat-xdk placeholder)
 - Not a guarantee of API stability for EXPERIMENTAL fields
-- Not a replacement for reading the [X developer docs](https://developer.twitter.com/en/docs)
+- Not a replacement for reading the [X developer docs](https://docs.x.com)
 
 ---
 
@@ -50,7 +51,7 @@ A starting point for teams building serious XChat bots. It gives you:
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/YOUR_ORG/xchat-bot-starter-pro
+git clone https://github.com/sherlock-488/xchat-bot-starter-pro
 cd xchat-bot-starter-pro
 pip install uv
 uv sync
@@ -66,7 +67,7 @@ xchat doctor
 xchat auth login
 
 # 5. Run your first bot
-xchat run --bot bots.echo_bot:EchoBot
+xchat run
 ```
 
 ---
@@ -145,12 +146,12 @@ That's it. `BotBase` provides `reply_to()`, `on_start()`, `on_stop()`, and `on_e
 ```
 xchat init                          Initialize project directory
 xchat doctor [--check-connectivity] Validate environment (12+ checks)
-xchat auth login [--scopes TEXT]    OAuth 1.0a login
+xchat auth login [--scopes TEXT]    OAuth 2.0 login (obtains user access token)
 xchat auth status                   Show auth status
 xchat unlock [--state-file PATH]    Get E2EE keys → state.json
 xchat subscribe --url URL           Register webhook with X
 xchat run [OPTIONS]                 Start bot
-  --bot MODULE:CLASS                Bot to run (default: bots.echo_bot:EchoBot)
+  --bot MODULE:CLASS                Bot to run (default: xchat_bot.examples.echo_bot:EchoBot)
   --transport stream|webhook        Override transport mode
   --crypto stub|real                Override crypto mode
 xchat inspect FIXTURE [--decrypt]   Parse and display fixture file
@@ -168,10 +169,11 @@ All settings use the `XCHAT_` prefix. Set in `.env` or environment.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `XCHAT_CONSUMER_KEY` | required | X app consumer key |
+| `XCHAT_CONSUMER_KEY` | required | X app consumer key (API key) |
 | `XCHAT_CONSUMER_SECRET` | required | X app consumer secret |
-| `XCHAT_ACCESS_TOKEN` | — | OAuth access token (set after login) |
-| `XCHAT_ACCESS_TOKEN_SECRET` | — | OAuth access token secret |
+| `XCHAT_BEARER_TOKEN` | — | App Bearer Token — used by Activity Stream |
+| `XCHAT_USER_ACCESS_TOKEN` | — | OAuth 2.0 user token — used for DM replies (set after `xchat auth login`) |
+| `XCHAT_USER_REFRESH_TOKEN` | — | OAuth 2.0 refresh token |
 | `XCHAT_TRANSPORT_MODE` | `stream` | `stream` or `webhook` |
 | `XCHAT_WEBHOOK_PORT` | `8080` | Webhook server port |
 | `XCHAT_WEBHOOK_PUBLIC_URL` | — | Public HTTPS URL (webhook mode) |
@@ -239,7 +241,7 @@ Short version:
 - E2EE decryption is a placeholder (chat-xdk not yet stable)
 - Reply API endpoint is observed, not yet fully documented
 - `conversation_token` field is EXPERIMENTAL
-- Activity Stream endpoint is observed from xchat-bot-python
+- Activity Stream endpoint: GET /2/activity/stream (official docs)
 
 ---
 
@@ -253,8 +255,8 @@ uv sync --all-extras
 pytest tests/ -x
 
 # Lint
-ruff check src/ tests/ bots/
-ruff format src/ tests/ bots/
+ruff check src/ tests/
+ruff format src/ tests/
 
 # Type check
 pyright src/

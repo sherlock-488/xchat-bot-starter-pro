@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
-
 from bots.moderation_bot import ModerationBot
+
 from tests.conftest import make_event
 
 

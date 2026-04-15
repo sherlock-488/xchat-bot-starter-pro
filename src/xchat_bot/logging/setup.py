@@ -27,11 +27,11 @@ from __future__ import annotations
 
 import logging
 import sys
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 import structlog
-from structlog.types import EventDict, Processor
+from structlog.types import Processor
 
 
 def configure_logging(

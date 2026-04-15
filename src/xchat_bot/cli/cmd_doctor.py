@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -52,7 +51,7 @@ def _run_checks(check_connectivity: bool = False) -> list[dict[str, object]]:
     results.append(_check(
         "XCHAT_CONSUMER_KEY is set",
         bool(consumer_key),
-        "Set XCHAT_CONSUMER_KEY in .env — get it from developer.twitter.com",
+        "Set XCHAT_CONSUMER_KEY in .env — get it from developer.x.com",
     ))
 
     # 5. XCHAT_CONSUMER_SECRET set
@@ -60,7 +59,7 @@ def _run_checks(check_connectivity: bool = False) -> list[dict[str, object]]:
     results.append(_check(
         "XCHAT_CONSUMER_SECRET is set",
         bool(consumer_secret),
-        "Set XCHAT_CONSUMER_SECRET in .env — get it from developer.twitter.com",
+        "Set XCHAT_CONSUMER_SECRET in .env — get it from developer.x.com",
     ))
 
     # 6. redirect URI uses 127.0.0.1, not localhost
@@ -130,12 +129,12 @@ def _run_checks(check_connectivity: bool = False) -> list[dict[str, object]]:
     if check_connectivity:
         try:
             import httpx
-            resp = httpx.get("https://api.twitter.com/2/openapi.json", timeout=5.0)
+            resp = httpx.get("https://api.x.com/2/openapi.json", timeout=5.0)
             ok = resp.status_code < 500
         except Exception:
             ok = False
         results.append(_check(
-            "X API connectivity (api.twitter.com)",
+            "X API connectivity (api.x.com)",
             ok,
             "Check your internet connection and firewall settings",
         ))

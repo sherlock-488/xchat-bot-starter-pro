@@ -34,7 +34,7 @@ def unlock(
         settings = AppSettings()  # type: ignore[call-arg]
     except Exception as exc:
         console.print(f"[red]Configuration error:[/red] {exc}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc
 
     if not settings.access_token:
         console.print("[red]Not authenticated.[/red] Run [cyan]xchat auth login[/cyan] first.")
@@ -60,10 +60,10 @@ def unlock(
         asyncio.run(_run())
     except FileExistsError as exc:
         console.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc
     except Exception as exc:
         console.print(f"[red]Unlock failed:[/red] {exc}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc
 
 
 def _load_dotenv() -> None:

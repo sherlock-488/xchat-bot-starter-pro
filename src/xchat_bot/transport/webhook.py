@@ -14,11 +14,9 @@ Use `xchat subscribe --url https://your-domain.com` to register your webhook.
 
 from __future__ import annotations
 
-import asyncio
-from typing import Any
-
 import structlog
 import uvicorn
+from fastapi import FastAPI
 
 from xchat_bot.config.settings import AppSettings
 from xchat_bot.crypto.base import CryptoAdapter
@@ -81,8 +79,9 @@ class WebhookTransport(Transport):
                 return
 
             if event.encrypted and self._crypto:
+                enc = event.encrypted
                 result = self._crypto.decrypt(
-                    encoded_event=event.encrypted.encoded_event or event.encrypted.encrypted_content or "",
+                    encoded_event=enc.encoded_event or enc.encrypted_content or "",
                     encrypted_conversation_key=event.encrypted.encrypted_conversation_key,
                 )
                 event = event.model_copy(update={
@@ -118,7 +117,7 @@ class WebhookTransport(Transport):
             self._server.should_exit = True
             logger.info("webhook_stop_requested")
 
-    def get_app(self, handler: EventHandler) -> Any:
+    def get_app(self, handler: EventHandler) -> FastAPI:
         """Return the FastAPI app without starting the server.
 
         Useful for running with an external ASGI server (gunicorn, etc.)

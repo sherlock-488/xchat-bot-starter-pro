@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable, Coroutine
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -27,11 +27,7 @@ from fastapi.responses import JSONResponse
 from xchat_bot.events.models import NormalizedEvent
 from xchat_bot.events.normalizer import EventNormalizer
 from xchat_bot.webhook.crc import compute_crc_response
-from xchat_bot.webhook.signature import (
-    LEGACY_SIGNATURE_HEADER,
-    SIGNATURE_HEADER,
-    verify_signature,
-)
+from xchat_bot.webhook.signature import verify_signature
 
 logger = structlog.get_logger(__name__)
 
@@ -82,7 +78,7 @@ def create_app(
         log.info("crc_challenge_responded")
         return JSONResponse(content=response)
 
-    @app.post("/webhook", status_code=202)
+    @app.post("/webhook", status_code=200)
     async def receive_event(
         request: Request,
         x_twitter_webhooks_signature: str | None = Header(None),
@@ -91,7 +87,7 @@ def create_app(
         """Receive a webhook event from X.
 
         Verifies signature, normalizes payload, and dispatches to handler.
-        Returns 202 immediately — handler runs in background.
+        Returns 200 per X webhook documentation — event is queued for processing.
         """
         body = await request.body()
         request_id = request.headers.get("x-request-id", "")
@@ -131,7 +127,7 @@ def create_app(
         if handler is not None:
             asyncio.create_task(_dispatch(handler, event, log))
 
-        return {"status": "accepted", "event_id": event.event_id}
+        return {"status": "ok", "event_id": event.event_id}
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -139,7 +135,7 @@ def create_app(
         return {
             "status": "ok",
             "ready": _ready["value"],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "version": version,
         }
 
@@ -153,7 +149,9 @@ def create_app(
         """Readiness probe — returns 200 when handler is registered."""
         if _ready["value"]:
             return JSONResponse({"status": "ready"}, status_code=200)
-        return JSONResponse({"status": "not_ready", "reason": "no handler registered"}, status_code=503)
+        return JSONResponse(
+            {"status": "not_ready", "reason": "no handler registered"}, status_code=503
+        )
 
     return app
 
@@ -161,7 +159,7 @@ def create_app(
 async def _dispatch(
     handler: EventHandler,
     event: NormalizedEvent,
-    log: Any,
+    log: structlog.BoundLogger,
 ) -> None:
     """Dispatch event to handler, catching and logging any exceptions."""
     try:

@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
 
-from xchat_bot.events.models import NormalizedEvent
 from xchat_bot.webhook.app import create_app
 from xchat_bot.webhook.signature import generate_signature
-
 
 CONSUMER_SECRET = "test_consumer_secret"
 
@@ -73,9 +70,9 @@ def test_webhook_official_schema(app: TestClient, mock_handler: AsyncMock) -> No
         }
     }
     resp, _ = _make_signed_request(app, payload)
-    assert resp.status_code == 202
+    assert resp.status_code == 200
     data = resp.json()
-    assert data["status"] == "accepted"
+    assert data["status"] == "ok"
     assert "event_id" in data
 
 
@@ -87,7 +84,7 @@ def test_webhook_demo_schema(app: TestClient, mock_handler: AsyncMock) -> None:
         ],
     }
     resp, _ = _make_signed_request(app, payload)
-    assert resp.status_code == 202
+    assert resp.status_code == 200
 
 
 def test_webhook_missing_signature_rejected(app: TestClient) -> None:
@@ -166,4 +163,4 @@ def test_webhook_no_secret_accepts_unsigned() -> None:
         json={"event_type": "chat.received"},
         headers={"Content-Type": "application/json"},
     )
-    assert resp.status_code == 202
+    assert resp.status_code == 200

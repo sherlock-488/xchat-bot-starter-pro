@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 from pathlib import Path
 
 import typer
@@ -30,7 +29,7 @@ def login(
     """
     from xchat_bot.auth.oauth import run_oauth_flow
     from xchat_bot.auth.token_store import TokenStore
-    from xchat_bot.config.settings import AppSettings, reset_settings_cache
+    from xchat_bot.config.settings import AppSettings
 
     _load_dotenv()
 
@@ -39,7 +38,7 @@ def login(
     except Exception as exc:
         console.print(f"[red]Configuration error:[/red] {exc}")
         console.print("Run [cyan]xchat doctor[/cyan] to diagnose issues.")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc
 
     console.print("\n[bold]xchat auth login[/bold]\n")
     console.print(f"Redirect URI: [cyan]{settings.oauth_redirect_uri}[/cyan]")
@@ -66,16 +65,17 @@ def login(
         console.print(f"[green]✓[/green] Tokens saved to {store.tokens_file}")
         console.print("\nAdd to your .env:")
         console.print(f"  [cyan]XCHAT_ACCESS_TOKEN={tokens.get('oauth_token', '')}[/cyan]")
-        console.print(f"  [cyan]XCHAT_ACCESS_TOKEN_SECRET={tokens.get('oauth_token_secret', '')}[/cyan]")
+        secret_val = tokens.get('oauth_token_secret', '')
+        console.print(f"  [cyan]XCHAT_ACCESS_TOKEN_SECRET={secret_val}[/cyan]")
 
     try:
         asyncio.run(_run())
     except TimeoutError as exc:
         console.print(f"[red]Timeout:[/red] {exc}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc
     except Exception as exc:
         console.print(f"[red]Auth failed:[/red] {exc}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc
 
 
 @app.command("status")
@@ -97,7 +97,8 @@ def status(
         user_id = tokens.get("user_id") or "unknown"
         has_token = bool(tokens.get("access_token"))
         console.print(f"  Authenticated as: [cyan]@{screen_name}[/cyan] (user_id: {user_id})")
-        console.print(f"  Access token: {'[green]present[/green]' if has_token else '[red]missing[/red]'}")
+        token_status = "[green]present[/green]" if has_token else "[red]missing[/red]"
+        console.print(f"  Access token: {token_status}")
         console.print(f"  Tokens file: {store.tokens_file}")
     else:
         console.print("  [yellow]Not authenticated[/yellow]")

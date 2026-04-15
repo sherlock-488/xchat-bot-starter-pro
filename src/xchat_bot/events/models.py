@@ -18,7 +18,7 @@ fully documented in official X developer docs. Treat them as unstable.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -209,4 +209,4 @@ class NormalizedEvent(BaseModel):
         return self.event_type == "chat.conversation_join"
 
     def now_utc() -> datetime:  # type: ignore[misc]
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
