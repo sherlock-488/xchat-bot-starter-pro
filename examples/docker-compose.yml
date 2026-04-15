@@ -9,8 +9,9 @@ services:
       # Required — set these in your .env or CI secrets
       XCHAT_CONSUMER_KEY: ${XCHAT_CONSUMER_KEY}
       XCHAT_CONSUMER_SECRET: ${XCHAT_CONSUMER_SECRET}
-      XCHAT_ACCESS_TOKEN: ${XCHAT_ACCESS_TOKEN}
-      XCHAT_ACCESS_TOKEN_SECRET: ${XCHAT_ACCESS_TOKEN_SECRET}
+      XCHAT_OAUTH_CLIENT_ID: ${XCHAT_OAUTH_CLIENT_ID}
+      XCHAT_BEARER_TOKEN: ${XCHAT_BEARER_TOKEN}
+      XCHAT_USER_ACCESS_TOKEN: ${XCHAT_USER_ACCESS_TOKEN}
 
       # Transport
       XCHAT_TRANSPORT_MODE: webhook
@@ -31,7 +32,8 @@ services:
     volumes:
       # Mount state.json for real crypto mode
       # - ./state.json:/app/state.json:ro
-      - ./bots:/app/bots:ro
+      # Mount custom bots (optional — built-in examples are in the package)
+      # - ./bots:/app/bots:ro
 
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8080/healthz').raise_for_status()"]
@@ -40,4 +42,4 @@ services:
       retries: 3
       start_period: 10s
 
-    command: ["xchat", "run", "--transport", "webhook", "--bot", "bots.echo_bot:EchoBot"]
+    command: ["xchat", "run", "--transport", "webhook", "--bot", "xchat_bot.examples.echo_bot:EchoBot"]

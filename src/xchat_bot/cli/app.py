@@ -7,7 +7,7 @@ Usage:
     xchat doctor
     xchat auth login
     xchat webhook register --url https://...
-    xchat subscriptions create --event-type chat.received
+    xchat subscriptions create --user-id <bot_user_id> --event-type chat.received
     xchat run
 """
 
@@ -17,7 +17,7 @@ import typer
 
 app = typer.Typer(
     name="xchat",
-    help="xchat-bot-starter-pro — production-grade XChat bot toolkit",
+    help="xchat-bot-starter-pro — XChat bot starter kit",
     no_args_is_help=True,
     rich_markup_mode="rich",
 )

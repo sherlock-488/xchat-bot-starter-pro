@@ -11,8 +11,9 @@ When to use it:
   - As a base for testing your transport and reply adapter
 
 Credentials needed:
-  - XCHAT_CONSUMER_KEY + XCHAT_CONSUMER_SECRET
-  - XCHAT_ACCESS_TOKEN + XCHAT_ACCESS_TOKEN_SECRET (for sending replies)
+  - XCHAT_CONSUMER_KEY + XCHAT_CONSUMER_SECRET (webhook HMAC signing)
+  - XCHAT_OAUTH_CLIENT_ID (for `xchat auth login`)
+  - XCHAT_USER_ACCESS_TOKEN (for sending replies — run `xchat auth login` first)
 
 Assumptions:
   - Ignores chat.sent events (to avoid echo loops)
@@ -35,7 +36,7 @@ class EchoBot(BotBase):
 
     Usage::
 
-        xchat run --bot bots.echo_bot:EchoBot
+        xchat run --bot xchat_bot.examples.echo_bot:EchoBot
     """
 
     async def handle(self, event: NormalizedEvent) -> None:

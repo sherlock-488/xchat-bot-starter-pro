@@ -51,7 +51,7 @@ class ModerationBot(BotBase):
 
     Usage::
 
-        xchat run --bot bots.moderation_bot:ModerationBot
+        xchat run --bot xchat_bot.examples.moderation_bot:ModerationBot
 
     To customize the blocklist::
 

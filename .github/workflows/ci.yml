@@ -30,14 +30,13 @@ jobs:
         run: uv sync --all-extras
 
       - name: Lint with ruff
-        run: uv run ruff check src/ tests/ bots/
+        run: uv run ruff check src/ tests/
 
       - name: Format check with ruff
-        run: uv run ruff format --check src/ tests/ bots/
+        run: uv run ruff format --check src/ tests/
 
       - name: Type check with pyright
         run: uv run pyright src/
-        continue-on-error: true  # Don't fail CI on type errors during early development
 
       - name: Run tests
         run: uv run pytest tests/ -x --cov=src/xchat_bot --cov-report=xml --cov-report=term-missing
@@ -61,10 +60,26 @@ jobs:
       - name: Build Docker image
         run: docker build --no-cache -t xchat-bot-starter-pro:test .
 
-      - name: Test Docker image
+      - name: Test Docker image — CLI
+        run: |
+          docker run --rm xchat-bot-starter-pro:test xchat version
+
+      - name: Test Docker image — example bot loads
         run: |
           docker run --rm \
+            -e XCHAT_BEARER_TOKEN=test_token \
+            xchat-bot-starter-pro:test \
+            python -c "from xchat_bot.examples.echo_bot import EchoBot; print('EchoBot OK')"
+
+      - name: Test Docker image — webhook server starts and healthz responds
+        run: |
+          docker run -d --name xchat-smoke \
+            -p 8080:8080 \
+            -e XCHAT_TRANSPORT_MODE=webhook \
             -e XCHAT_CONSUMER_KEY=test_key \
             -e XCHAT_CONSUMER_SECRET=test_secret \
             xchat-bot-starter-pro:test \
-            xchat version
+            xchat run --transport webhook
+          sleep 5
+          curl --fail --retry 3 --retry-delay 2 http://localhost:8080/healthz
+          docker stop xchat-smoke

@@ -6,10 +6,8 @@ requests, are verified, normalized, and dispatched to the EventHandler.
 
 Requirements for webhook mode:
   - A public HTTPS URL (X won't POST to localhost)
-  - The URL registered in X Developer Portal
-  - Subscription created via `xchat subscribe`
-
-Use `xchat subscribe --url https://your-domain.com` to register your webhook.
+  - The URL registered via `xchat webhook register --url https://your-domain.com`
+  - Subscription created via `xchat subscriptions create --user-id <bot_user_id>`
 """
 
 from __future__ import annotations
@@ -73,7 +71,11 @@ class WebhookTransport(Transport):
         )
 
         app = create_app(
-            consumer_secret=self._settings.consumer_secret.get_secret_value(),
+            consumer_secret=(
+                self._settings.consumer_secret.get_secret_value()
+                if self._settings.consumer_secret
+                else ""
+            ),
             handler=self._make_enriched_handler(handler),
             normalizer=self._normalizer,
         )
@@ -110,7 +112,11 @@ class WebhookTransport(Transport):
             FastAPI application instance with full dedup+decrypt middleware.
         """
         return create_app(
-            consumer_secret=self._settings.consumer_secret.get_secret_value(),
+            consumer_secret=(
+                self._settings.consumer_secret.get_secret_value()
+                if self._settings.consumer_secret
+                else ""
+            ),
             handler=self._make_enriched_handler(handler),
             normalizer=self._normalizer,
         )

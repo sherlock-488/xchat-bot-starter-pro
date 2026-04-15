@@ -9,7 +9,7 @@ A subscription specifies:
 
 Typical flow:
   1. xchat webhook register --url https://bot.example.com/webhook
-  2. xchat subscriptions create --event-type chat.received
+  2. xchat subscriptions create --user-id <bot_user_id> --event-type chat.received
   3. xchat run --transport webhook
 
 For Activity Stream mode (no webhook), subscriptions are still needed
@@ -127,12 +127,11 @@ def create(
 
     if resp.status_code in (200, 201):
         data = resp.json()
-        # Official response uses subscription_id, fall back to id for compatibility
+        # Official response shape: {"data": {"subscription": {"subscription_id": "..."}}}
         sub_id = (
-            data.get("data", {}).get("subscription_id")
-            or data.get("data", {}).get("id")
-            or data.get("subscription_id")
-            or data.get("id", "")
+            data.get("data", {}).get("subscription", {}).get("subscription_id")
+            or data.get("data", {}).get("subscription_id")
+            or data.get("data", {}).get("id", "")
         )
         console.print("[green]✓[/green] Subscription created.")
         if sub_id:

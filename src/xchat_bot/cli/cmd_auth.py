@@ -16,7 +16,7 @@ console = Console()
 @app.command("login")
 def login(
     scopes: str = typer.Option(
-        "dm.read dm.write users.read offline.access",
+        "dm.read dm.write tweet.read users.read offline.access",
         "--scopes",
         help="Space-separated OAuth 2.0 scopes",
     ),
@@ -36,7 +36,8 @@ def login(
     `xchat run` can pick it up immediately.
 
     Prerequisites:
-      - XCHAT_CONSUMER_KEY set (used as the OAuth 2.0 client_id)
+      - XCHAT_OAUTH_CLIENT_ID set (OAuth 2.0 Client ID from X Developer Portal →
+        your app → Keys and tokens → OAuth 2.0 — different from the API Key)
       - http://127.0.0.1:7171/callback registered in X Developer Portal
         under your app's "Callback URLs"
 
@@ -57,21 +58,31 @@ def login(
         console.print("Run [cyan]xchat doctor[/cyan] to diagnose issues.")
         raise typer.Exit(code=1) from exc
 
-    # Resolve OAuth 2.0 client_id: prefer XCHAT_OAUTH_CLIENT_ID, fall back to consumer_key
-    client_id = settings.oauth_client_id or settings.consumer_key
-    using_fallback = not settings.oauth_client_id
-    if using_fallback:
+    # XCHAT_OAUTH_CLIENT_ID is required — it is NOT the same as the API Key (consumer_key).
+    # In X Developer Portal: App Settings → Keys and tokens → OAuth 2.0 Client ID
+    if not settings.oauth_client_id:
         console.print(
-            "[yellow]Note:[/yellow] XCHAT_OAUTH_CLIENT_ID is not set. "
-            "Falling back to XCHAT_CONSUMER_KEY as client_id.\n"
-            "  In X Developer Portal, the OAuth 2.0 Client ID is listed separately from\n"
-            "  the API Key under 'Keys and tokens'. Set XCHAT_OAUTH_CLIENT_ID for best results."
+            "[red]Error:[/red] XCHAT_OAUTH_CLIENT_ID is not set.\n"
+            "\n"
+            "  The OAuth 2.0 Client ID is different from the API Key (XCHAT_CONSUMER_KEY).\n"
+            "  Find it in X Developer Portal → App Settings → Keys and tokens → OAuth 2.0.\n"
+            "\n"
+            "  Add to your .env:\n"
+            "    [cyan]XCHAT_OAUTH_CLIENT_ID=<your OAuth 2.0 Client ID>[/cyan]\n"
+            "    [cyan]XCHAT_OAUTH_CLIENT_SECRET=<your OAuth 2.0 Client Secret>[/cyan]"
+            "  [dim]# confidential clients only[/dim]"
         )
-        console.print()
+        raise typer.Exit(code=1)
+
+    client_id: str = settings.oauth_client_id
+    client_secret: str | None = (
+        settings.oauth_client_secret.get_secret_value() if settings.oauth_client_secret else None
+    )
 
     console.print("\n[bold]xchat auth login[/bold] (OAuth 2.0 PKCE)\n")
-    fallback_note = "  [dim](fallback: using XCHAT_CONSUMER_KEY)[/dim]" if using_fallback else ""
-    console.print(f"  Client ID  : [cyan]{client_id}[/cyan]{fallback_note}")
+    console.print(f"  Client ID  : [cyan]{client_id}[/cyan]")
+    confidential = "yes" if client_secret else "no (public client)"
+    console.print(f"  Confidential: [cyan]{confidential}[/cyan]")
     console.print(f"  Redirect   : [cyan]{settings.oauth_redirect_uri}[/cyan]")
     console.print(f"  Scopes     : [cyan]{scopes}[/cyan]")
     console.print()
@@ -81,16 +92,37 @@ def login(
             client_id=client_id,
             redirect_uri=settings.oauth_redirect_uri,
             scopes=scopes,
+            client_secret=client_secret,
         )
 
         access_token: str = token_resp.get("access_token", "")
         refresh_token: str | None = token_resp.get("refresh_token")
         granted_scope: str | None = token_resp.get("scope")
 
+        # Fetch user identity so `xchat auth status` can show account name
+        user_id: str | None = None
+        screen_name: str | None = None
+        try:
+            import httpx as _httpx
+
+            me_resp = await _httpx.AsyncClient().get(
+                "https://api.x.com/2/users/me",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10.0,
+            )
+            if me_resp.is_success:
+                me_data = me_resp.json().get("data", {})
+                user_id = me_data.get("id")
+                screen_name = me_data.get("username")
+        except Exception:  # noqa: BLE001, S110
+            pass  # non-fatal — identity lookup is best-effort
+
         store = TokenStore(data_dir.expanduser())
         store.save(
             access_token=access_token,
             refresh_token=refresh_token,
+            user_id=user_id,
+            screen_name=screen_name,
             scope=granted_scope,
         )
 

@@ -55,7 +55,8 @@ xchat unlock --force       # overwrites with fresh keys
 ```bash
 ngrok http 8080
 # Copy the https:// URL → set as XCHAT_WEBHOOK_PUBLIC_URL
-xchat subscribe --url https://your-ngrok-url.ngrok.io
+xchat webhook register --url https://your-ngrok-url.ngrok.io
+xchat subscriptions create --user-id <your_bot_user_id> --event-type chat.received
 ```
 
 ---
@@ -65,10 +66,11 @@ xchat subscribe --url https://your-ngrok-url.ngrok.io
 **Symptom:** `xchat doctor` fails on credential checks, or API calls return 401.
 
 **Checklist:**
-- [ ] `XCHAT_CONSUMER_KEY` set (from X Developer Portal → Keys and tokens)
+- [ ] `XCHAT_CONSUMER_KEY` set (from X Developer Portal → Keys and tokens → API Key)
 - [ ] `XCHAT_CONSUMER_SECRET` set
-- [ ] `xchat auth login` completed (generates access token)
-- [ ] `XCHAT_ACCESS_TOKEN` and `XCHAT_ACCESS_TOKEN_SECRET` set in `.env`
+- [ ] `XCHAT_OAUTH_CLIENT_ID` set (from X Developer Portal → Keys and tokens → OAuth 2.0 Client ID — **different from API Key**)
+- [ ] `XCHAT_BEARER_TOKEN` set (for stream mode — from X Developer Portal → Keys and tokens → Bearer Token)
+- [ ] `xchat auth login` completed (produces `XCHAT_USER_ACCESS_TOKEN`)
 - [ ] `.env` file exists (not just `.env.example`)
 
 **Never commit:**

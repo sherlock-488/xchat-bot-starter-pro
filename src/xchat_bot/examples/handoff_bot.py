@@ -70,7 +70,7 @@ class HandoffBot(BotBase):
 
     Usage::
 
-        xchat run --bot bots.handoff_bot:HandoffBot
+        xchat run --bot xchat_bot.examples.handoff_bot:HandoffBot
 
     To customize triggers::
 

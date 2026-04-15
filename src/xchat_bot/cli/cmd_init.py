@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.resources
 from pathlib import Path
 
 import typer
@@ -9,6 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 console = Console()
+
 
 GITIGNORE_ENTRIES = [
     ".env",
@@ -24,19 +26,11 @@ GITIGNORE_ENTRIES = [
     "recordings/",
 ]
 
-ENV_EXAMPLE = """\
-# xchat-bot-starter-pro environment configuration
-# Fill in your values and rename to .env
-# NEVER commit .env to git
 
-XCHAT_CONSUMER_KEY=your_consumer_key_here
-XCHAT_CONSUMER_SECRET=your_consumer_secret_here
-XCHAT_TRANSPORT_MODE=stream
-XCHAT_OAUTH_REDIRECT_URI=http://127.0.0.1:7171/callback
-XCHAT_CRYPTO_MODE=stub
-XCHAT_LOG_LEVEL=INFO
-XCHAT_LOG_FORMAT=console
-"""
+def _load_env_example() -> str:
+    """Load .env.example from package data (single source of truth)."""
+    pkg = importlib.resources.files("xchat_bot")
+    return (pkg / "env.example").read_text(encoding="utf-8")
 
 
 def init(
@@ -55,7 +49,7 @@ def init(
     # Create .env.example
     env_example = directory / ".env.example"
     if not env_example.exists() or force:
-        env_example.write_text(ENV_EXAMPLE, encoding="utf-8")
+        env_example.write_text(_load_env_example(), encoding="utf-8")
         console.print(f"  [green]✓[/green] Created {env_example.name}")
     else:
         console.print(f"  [dim]· Skipped {env_example.name} (already exists)[/dim]")
@@ -80,10 +74,14 @@ def init(
     console.print(
         Panel(
             "[bold]Next steps:[/bold]\n\n"
-            "1. [cyan]cp .env.example .env[/cyan] and fill in your credentials\n"
-            "2. [cyan]xchat doctor[/cyan] to validate your setup\n"
-            "3. [cyan]xchat auth login[/cyan] to authenticate\n"
-            "4. [cyan]xchat run --bot bots.echo_bot:EchoBot[/cyan] to start your bot",
+            "1. [cyan]cp .env.example .env[/cyan] — fill in credentials\n"
+            "2. [cyan]xchat doctor[/cyan] — validate your setup\n"
+            "3. [cyan]xchat auth login[/cyan] — authenticate (opens browser)\n"
+            "4. [cyan]xchat subscriptions create --user-id <bot_user_id>[/cyan]\n"
+            "   [dim]Tell X which events to deliver to your bot[/dim]\n"
+            "   [dim](webhook mode: run `xchat webhook register --url ...` first)[/dim]\n"
+            "5. [cyan]xchat run[/cyan] — start the bot\n"
+            "   [dim](default: xchat_bot.examples.echo_bot:EchoBot)[/dim]",
             title="xchat init complete",
             border_style="green",
         )

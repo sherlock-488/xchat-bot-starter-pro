@@ -13,8 +13,8 @@ When to use it:
   - Gradual automation: start with human review, automate as confidence grows
 
 Credentials needed:
-  - XCHAT_CONSUMER_KEY + XCHAT_CONSUMER_SECRET
-  - XCHAT_ACCESS_TOKEN for sending approved replies
+  - XCHAT_CONSUMER_KEY + XCHAT_CONSUMER_SECRET (webhook HMAC signing)
+  - XCHAT_USER_ACCESS_TOKEN for sending approved replies (run `xchat auth login` first)
 
 Assumptions:
   - Queue is a JSONL file (drafts/queue.jsonl) — simple, inspectable
@@ -47,7 +47,7 @@ class DraftReplyBot(BotBase):
 
     Usage::
 
-        xchat run --bot bots.draft_reply_bot:DraftReplyBot
+        xchat run --bot xchat_bot.examples.draft_reply_bot:DraftReplyBot
 
     To review and send drafts:
         cat drafts/queue.jsonl  # inspect pending drafts

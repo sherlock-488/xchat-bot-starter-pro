@@ -1,6 +1,8 @@
 # xchat-bot-starter-pro
 
-A production-grade starter kit for building XChat bots on the X Activity API.
+A well-structured starter kit for building XChat bots on the X Activity API.
+Suitable for development, prototyping, and single-instance deployments.
+See [Status and Caveats](#️-status-and-caveats) before using in production.
 
 [![CI](https://github.com/sherlock-488/xchat-bot-starter-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/sherlock-488/xchat-bot-starter-pro/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -19,7 +21,7 @@ This starter kit follows current official examples and documentation. Some XChat
 | CRC challenge + webhook signature | ✅ Documented, stable |
 | OAuth 2.0 user token (reply) | ✅ Documented, stable |
 | App Bearer Token (stream) | ✅ Documented, stable |
-| Activity Stream transport | ✅ GET /2/activity/stream (official docs) |
+| Activity Stream transport | ⚠️ Endpoint documented; reconnect params observed |
 | Reply API | ⚠️ Endpoint/format observed, not yet fully documented |
 | E2EE decryption | ⚠️ EXPERIMENTAL — chat-xdk not yet officially released |
 | `conversation_token` field | ⚠️ EXPERIMENTAL — observed, not yet documented |
@@ -58,10 +60,13 @@ uv sync
 
 # 2. Configure
 cp .env.example .env
-# Edit .env:
-#   XCHAT_CONSUMER_KEY=...      (X app API key)
-#   XCHAT_CONSUMER_SECRET=...   (X app API secret)
-#   XCHAT_BEARER_TOKEN=...      (App Bearer Token — for Activity Stream)
+# Edit .env — minimum required fields for stream mode:
+#   XCHAT_OAUTH_CLIENT_ID=...     (OAuth 2.0 Client ID — DIFFERENT from API key,
+#                                  find it under Keys and tokens → OAuth 2.0)
+#   XCHAT_BEARER_TOKEN=...        (App Bearer Token — for Activity Stream)
+# Also required for webhook mode:
+#   XCHAT_CONSUMER_KEY=...        (X app API key — for webhook HMAC signing)
+#   XCHAT_CONSUMER_SECRET=...     (X app API secret)
 
 # 3. Validate setup
 xchat doctor
@@ -70,8 +75,17 @@ xchat doctor
 xchat auth login
 # This writes XCHAT_USER_ACCESS_TOKEN to .env automatically.
 
-# 5. Run your first bot
+# 5. Subscribe to events (tells X which events to deliver to your bot)
+#    Find your bot's numeric user ID at: https://developer.x.com/en/docs/twitter-api/users/lookup
+xchat subscriptions create --user-id <your_bot_user_id> --event-type chat.received
+#
+#    Webhook mode only: register your public URL first, then subscribe
+#    xchat webhook register --url https://your-domain.com/webhook
+#    xchat subscriptions create --user-id <your_bot_user_id> --event-type chat.received
+
+# 6. Run your first bot
 xchat run
+# Default bot: xchat_bot.examples.echo_bot:EchoBot (echoes every incoming DM)
 ```
 
 ---
@@ -161,6 +175,7 @@ xchat webhook delete WEBHOOK_ID         Delete a webhook
 
 # Activity subscriptions (what events to receive)
 xchat subscriptions create              Create a subscription (POST /2/activity/subscriptions)
+  --user-id BOT_USER_ID                 Your bot's X user ID (required)
   --event-type chat.received            Event type (default: chat.received)
   --tag TEXT                            Optional label
   --webhook-id ID                       Associate with a webhook (webhook mode)
@@ -186,9 +201,10 @@ All settings use the `XCHAT_` prefix. Set in `.env` or environment.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `XCHAT_CONSUMER_KEY` | required | X app consumer key (API key) |
-| `XCHAT_CONSUMER_SECRET` | required | X app consumer secret |
-| `XCHAT_BEARER_TOKEN` | — | App Bearer Token — used by Activity Stream |
+| `XCHAT_CONSUMER_KEY` | required for webhook mode | X app consumer key (API key) — used for webhook HMAC signing. Optional for stream-only bots. |
+| `XCHAT_CONSUMER_SECRET` | required for webhook mode | X app consumer secret. Optional for stream-only bots. |
+| `XCHAT_OAUTH_CLIENT_ID` | required for `xchat auth login` | OAuth 2.0 Client ID — **different from API key**, find it under Keys and tokens → OAuth 2.0 |
+| `XCHAT_BEARER_TOKEN` | required for stream mode | App Bearer Token — used by Activity Stream |
 | `XCHAT_USER_ACCESS_TOKEN` | — | OAuth 2.0 user token — used for DM replies (set after `xchat auth login`) |
 | `XCHAT_USER_REFRESH_TOKEN` | — | OAuth 2.0 refresh token |
 | `XCHAT_TRANSPORT_MODE` | `stream` | `stream` or `webhook` |
@@ -258,7 +274,7 @@ Short version:
 - E2EE decryption is a placeholder (chat-xdk not yet stable)
 - Reply API endpoint is observed, not yet fully documented
 - `conversation_token` field is EXPERIMENTAL
-- Activity Stream endpoint: GET /2/activity/stream (official docs)
+- Activity Stream endpoint: GET /2/activity/stream (endpoint documented; reconnect params observed)
 
 ---
 

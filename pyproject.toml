@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "xchat-bot-starter-pro"
 version = "0.1.0"
-description = "Production-grade starter kit for building XChat bots on the X Activity API"
+description = "Starter kit for building XChat bots on the X Activity API"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -67,7 +67,6 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "S", "ANN"]
 ignore = [
-    "ANN101", "ANN102",
     "S101",   # assert is fine in tests and bot code
     "B008",   # typer.Option() in function defaults is the documented typer pattern
     "S105",   # URL constants named *_TOKEN_URL are not passwords

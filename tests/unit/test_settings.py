@@ -18,16 +18,21 @@ def test_valid_settings() -> None:
     assert settings.crypto_mode == "stub"
 
 
-def test_missing_consumer_key_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_consumer_key_optional_in_stream_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    """consumer_key is optional when transport_mode=stream (stream doesn't need HMAC signing)."""
     monkeypatch.delenv("XCHAT_CONSUMER_KEY", raising=False)
-    with pytest.raises(ValidationError):
-        AppSettings(consumer_secret="secret")  # type: ignore[call-arg]
-
-
-def test_missing_consumer_secret_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("XCHAT_CONSUMER_SECRET", raising=False)
-    with pytest.raises(ValidationError):
-        AppSettings(consumer_key="key")  # type: ignore[call-arg]
+    settings = AppSettings(transport_mode="stream")  # type: ignore[call-arg]
+    assert settings.consumer_key is None
+    assert settings.consumer_secret is None
+
+
+def test_consumer_key_required_in_webhook_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    """consumer_key + consumer_secret are required when transport_mode=webhook."""
+    monkeypatch.delenv("XCHAT_CONSUMER_KEY", raising=False)
+    monkeypatch.delenv("XCHAT_CONSUMER_SECRET", raising=False)
+    with pytest.raises(ValidationError, match="XCHAT_CONSUMER_KEY"):
+        AppSettings(transport_mode="webhook")  # type: ignore[call-arg]
 
 
 def test_localhost_redirect_uri_rejected() -> None:

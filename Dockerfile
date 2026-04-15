@@ -5,27 +5,15 @@ FROM python:3.11-slim AS builder
 WORKDIR /app
 
 # Install uv
-RUN pip install --no-cache-dir uv==0.4.0
+RUN pip install --no-cache-dir uv
 
-# Copy dependency files
-COPY pyproject.toml ./
-# Create a minimal package structure for uv sync
+# Copy lock file + manifest first for layer caching
+COPY pyproject.toml uv.lock ./
+# Create a minimal package stub so uv sync can resolve the local package
 RUN mkdir -p src/xchat_bot && touch src/xchat_bot/__init__.py
 
-# Install production dependencies only
-RUN uv sync --no-dev --frozen 2>/dev/null || uv pip install --system \
-    fastapi \
-    uvicorn[standard] \
-    typer \
-    httpx \
-    pydantic \
-    pydantic-settings \
-    structlog \
-    tenacity \
-    cryptography \
-    python-dotenv \
-    rich \
-    anyio
+# Install production dependencies from the lock file (reproducible)
+RUN uv sync --no-dev --frozen
 
 # Stage 2: Runtime
 FROM python:3.11-slim AS runtime
@@ -38,8 +26,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY src/ /app/src/
-COPY bots/ /app/bots/
-COPY pyproject.toml /app/
+COPY pyproject.toml README.md /app/
 
 # Install the package itself
 RUN pip install --no-cache-dir -e . --no-deps
@@ -52,8 +39,10 @@ USER xchat
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import httpx; httpx.get('http://localhost:8080/healthz', timeout=3).raise_for_status()" || exit 1
 
-# Default: run webhook transport
-# Override with: docker run ... xchat run --transport stream --bot bots.echo_bot:EchoBot
-CMD ["xchat", "run", "--transport", "webhook", "--bot", "bots.echo_bot:EchoBot"]
+# Default: run webhook transport with the built-in echo bot.
+# Override the bot with: docker run ... xchat run --bot xchat_bot.examples.echo_bot:EchoBot
+# To use a custom bot mounted at /app/bots/my_bot.py:
+#   docker run -v ./bots:/app/bots ... xchat run --bot bots.my_bot:MyBot
+CMD ["xchat", "run", "--transport", "webhook", "--bot", "xchat_bot.examples.echo_bot:EchoBot"]
 
 EXPOSE 8080

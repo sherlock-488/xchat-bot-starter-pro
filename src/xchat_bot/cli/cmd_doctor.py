@@ -57,27 +57,60 @@ def _run_checks(check_connectivity: bool = False) -> list[dict[str, object]]:
         )
     )
 
-    # 4. XCHAT_CONSUMER_KEY set
+    # 4. XCHAT_CONSUMER_KEY set (required for webhook mode; optional for stream)
     consumer_key = os.getenv("XCHAT_CONSUMER_KEY", "")
-    results.append(
-        _check(
-            "XCHAT_CONSUMER_KEY is set",
-            bool(consumer_key),
-            "Set XCHAT_CONSUMER_KEY in .env — get it from developer.x.com",
+    _transport_for_check = os.getenv("XCHAT_TRANSPORT_MODE", "stream")
+    if _transport_for_check == "webhook":
+        results.append(
+            _check(
+                "XCHAT_CONSUMER_KEY is set (required for webhook HMAC signing)",
+                bool(consumer_key),
+                "Set XCHAT_CONSUMER_KEY in .env — get it from developer.x.com",
+            )
         )
-    )
+    else:
+        results.append(
+            _check_warn(
+                "XCHAT_CONSUMER_KEY is set (required for webhook mode only)",
+                bool(consumer_key),
+                "Set XCHAT_CONSUMER_KEY if you plan to use webhook transport. "
+                "Not required for stream mode.",
+            )
+        )
 
-    # 5. XCHAT_CONSUMER_SECRET set
+    # 5. XCHAT_CONSUMER_SECRET set (required for webhook mode; optional for stream)
     consumer_secret = os.getenv("XCHAT_CONSUMER_SECRET", "")
+    if _transport_for_check == "webhook":
+        results.append(
+            _check(
+                "XCHAT_CONSUMER_SECRET is set (required for webhook HMAC signing)",
+                bool(consumer_secret),
+                "Set XCHAT_CONSUMER_SECRET in .env — get it from developer.x.com",
+            )
+        )
+    else:
+        results.append(
+            _check_warn(
+                "XCHAT_CONSUMER_SECRET is set (required for webhook mode only)",
+                bool(consumer_secret),
+                "Set XCHAT_CONSUMER_SECRET if you plan to use webhook transport. "
+                "Not required for stream mode.",
+            )
+        )
+
+    # 5b. XCHAT_OAUTH_CLIENT_ID set (required for xchat auth login)
+    oauth_client_id = os.getenv("XCHAT_OAUTH_CLIENT_ID", "")
     results.append(
         _check(
-            "XCHAT_CONSUMER_SECRET is set",
-            bool(consumer_secret),
-            "Set XCHAT_CONSUMER_SECRET in .env — get it from developer.x.com",
+            "XCHAT_OAUTH_CLIENT_ID is set (required for xchat auth login)",
+            bool(oauth_client_id),
+            "Set XCHAT_OAUTH_CLIENT_ID in .env — find it in X Developer Portal → "
+            "your app → Keys and tokens → OAuth 2.0 Client ID. "
+            "This is DIFFERENT from the API Key (XCHAT_CONSUMER_KEY).",
         )
     )
 
-    # 5b. XCHAT_BEARER_TOKEN set (required for Activity Stream)
+    # 5c. XCHAT_BEARER_TOKEN set (required for Activity Stream)
     bearer_token = os.getenv("XCHAT_BEARER_TOKEN", "")
     transport_mode_check = os.getenv("XCHAT_TRANSPORT_MODE", "stream")
     if transport_mode_check == "stream":
@@ -90,7 +123,7 @@ def _run_checks(check_connectivity: bool = False) -> list[dict[str, object]]:
             )
         )
 
-    # 5c. XCHAT_USER_ACCESS_TOKEN set (needed for DM replies, optional for receive-only)
+    # 5d. XCHAT_USER_ACCESS_TOKEN set (needed for DM replies, optional for receive-only)
     # This is a WARNING, not a hard failure — the bot can still receive events without it,
     # using LoggingReplyAdapter. Only xchat auth login is needed to enable actual replies.
     user_access_token = os.getenv("XCHAT_USER_ACCESS_TOKEN", "")
@@ -274,5 +307,36 @@ def doctor(
         console.print(f"\n[bold red]{failures} check(s) failed.[/bold red]")
         if warnings:
             console.print(f"[yellow]{warnings} warning(s).[/yellow]")
-        console.print("Run [cyan]xchat init[/cyan] to fix .gitignore issues automatically.\n")
+
+        # Collect labels of failed checks to give targeted advice
+        failed_labels = [str(r["label"]) for r in results if not r["ok"] and not r.get("warn")]
+        has_env = any(".env" in lbl for lbl in failed_labels)
+        has_gitignore = any("gitignore" in lbl.lower() for lbl in failed_labels)
+        _cred_keys = ("CONSUMER_KEY", "CONSUMER_SECRET", "BEARER_TOKEN", "OAUTH_CLIENT_ID")
+        has_credentials = any(any(k in lbl for k in _cred_keys) for lbl in failed_labels)
+        has_token = any("USER_ACCESS_TOKEN" in lbl for lbl in failed_labels)
+        has_redirect = any("redirect" in lbl.lower() or "127.0.0.1" in lbl for lbl in failed_labels)
+        has_webhook_url = any("WEBHOOK_PUBLIC_URL" in lbl for lbl in failed_labels)
+
+        if has_env:
+            console.print("  → [cyan]cp .env.example .env[/cyan] then fill in your credentials")
+        if has_credentials:
+            console.print(
+                "  → Get credentials from [cyan]developer.x.com[/cyan] → your app → Keys and tokens"
+            )
+        if has_token:
+            console.print("  → Run [cyan]xchat auth login[/cyan] to obtain an OAuth 2.0 user token")
+        if has_redirect:
+            console.print(
+                "  → Set [cyan]XCHAT_OAUTH_REDIRECT_URI=http://127.0.0.1:7171/callback[/cyan]"
+                " (not localhost)"
+            )
+        if has_webhook_url:
+            console.print(
+                "  → Set [cyan]XCHAT_WEBHOOK_PUBLIC_URL[/cyan] to your public HTTPS URL"
+                " (e.g. https://bot.example.com)"
+            )
+        if has_gitignore:
+            console.print("  → Run [cyan]xchat init[/cyan] to update .gitignore automatically")
+        console.print()
         raise typer.Exit(code=1)

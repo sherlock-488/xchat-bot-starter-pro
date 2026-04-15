@@ -36,8 +36,10 @@ import httpx
 AUTHORIZE_URL = "https://x.com/i/oauth2/authorize"
 TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
-# Default scopes for a DM bot: read DMs + send DMs + identify the user
-DEFAULT_SCOPES = "dm.read dm.write users.read offline.access"
+# Default scopes for a DM bot.
+# dm.write requires dm.read + tweet.read + users.read per official DM integration guide.
+# offline.access is required to receive a refresh_token.
+DEFAULT_SCOPES = "dm.read dm.write tweet.read users.read offline.access"
 
 
 def _pkce_pair() -> tuple[str, str]:
@@ -57,14 +59,17 @@ async def _exchange_code(
     code_verifier: str,
     client_id: str,
     redirect_uri: str,
+    client_secret: str | None = None,
 ) -> dict[str, str]:
     """Exchange an authorization code for access + refresh tokens.
 
     Args:
         code: The authorization code from the callback.
         code_verifier: The PKCE verifier generated before the auth request.
-        client_id: X app client ID (= consumer key for OAuth 2.0).
+        client_id: OAuth 2.0 Client ID from X Developer Portal.
         redirect_uri: Must match the URI used in the authorization request.
+        client_secret: OAuth 2.0 Client Secret (required for confidential clients).
+                       Public clients (PKCE-only) may omit this.
 
     Returns:
         Token response dict containing access_token, refresh_token, scope, etc.
@@ -72,16 +77,22 @@ async def _exchange_code(
     Raises:
         httpx.HTTPStatusError: If the token exchange fails.
     """
+    payload: dict[str, str] = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": redirect_uri,
+        "client_id": client_id,
+        "code_verifier": code_verifier,
+    }
+    # Confidential clients send client_secret in the request body.
+    # Public clients (PKCE-only) omit it — the code_verifier is sufficient.
+    if client_secret:
+        payload["client_secret"] = client_secret
+
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             TOKEN_URL,
-            data={
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": redirect_uri,
-                "client_id": client_id,
-                "code_verifier": code_verifier,
-            },
+            data=payload,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
         resp.raise_for_status()
@@ -93,6 +104,7 @@ async def run_oauth_flow(
     redirect_uri: str = "http://127.0.0.1:7171/callback",
     scopes: str = DEFAULT_SCOPES,
     *,
+    client_secret: str | None = None,
     open_browser: bool = True,
     timeout: float = 120.0,
 ) -> dict[str, str]:
@@ -103,11 +115,13 @@ async def run_oauth_flow(
     access + refresh tokens.
 
     Args:
-        client_id: X app client ID (same value as consumer key / API key).
+        client_id: OAuth 2.0 Client ID from X Developer Portal → your app →
+                   Keys and tokens → OAuth 2.0 Client ID. This is DIFFERENT
+                   from the API Key (consumer_key / XCHAT_CONSUMER_KEY).
         redirect_uri: Must use 127.0.0.1, not localhost. Must be registered
                       in X Developer Portal under your app's callback URLs.
         scopes: Space-separated OAuth 2.0 scopes.
-                Default: "dm.read dm.write users.read offline.access"
+                Default: "dm.read dm.write tweet.read users.read offline.access"
         open_browser: If True, open the browser automatically.
         timeout: Seconds to wait for user to complete authorization.
 
@@ -195,4 +209,4 @@ async def run_oauth_flow(
         await asyncio.sleep(0.1)
         server_task.cancel()
 
-    return await _exchange_code(code, code_verifier, client_id, redirect_uri)
+    return await _exchange_code(code, code_verifier, client_id, redirect_uri, client_secret)

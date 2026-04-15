@@ -5,9 +5,9 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from bots.router_bot import RouterBot
 
 from tests.conftest import make_event
+from xchat_bot.examples.router_bot import RouterBot
 
 
 @pytest.fixture

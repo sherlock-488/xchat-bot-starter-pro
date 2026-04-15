@@ -10,8 +10,6 @@ X Activity API uses three separate credential sets:
 
 1. App credentials (``XCHAT_CONSUMER_KEY`` / ``XCHAT_CONSUMER_SECRET``)
    - Used for webhook HMAC-SHA256 signature verification only.
-   - Also used as ``client_id`` / ``client_secret`` for OAuth 2.0 IF your
-     app does not have a separate OAuth 2.0 Client ID (see note below).
 
 2. App Bearer Token (``XCHAT_BEARER_TOKEN``)
    - Used by the Activity Stream transport to connect and receive events.
@@ -23,8 +21,7 @@ X Activity API uses three separate credential sets:
    - In X Developer Portal, these appear as "OAuth 2.0 Client ID and Secret"
      under your app's "Keys and tokens" tab — they are DIFFERENT from the
      API Key & Secret (consumer key/secret).
-   - If ``XCHAT_OAUTH_CLIENT_ID`` is not set, auth login falls back to
-     ``XCHAT_CONSUMER_KEY`` as client_id (works for some app types but not all).
+   - ``XCHAT_OAUTH_CLIENT_ID`` is REQUIRED for ``xchat auth login``.
 
 4. OAuth 2.0 User Access Token (``XCHAT_USER_ACCESS_TOKEN``)
    - Used by the Reply adapter to send DMs on behalf of the bot account.
@@ -50,21 +47,26 @@ class AppSettings(BaseSettings):
         extra="ignore",
     )
 
-    # ── App credentials (required) ────────────────────────────────────────
-    consumer_key: str = Field(..., description="X app consumer key (API key)")
-    consumer_secret: SecretStr = Field(..., description="X app consumer secret")
+    # ── App credentials (required for webhook mode; optional for stream-only) ──
+    # Used for webhook HMAC-SHA256 signature verification.
+    # Not needed if you only use stream transport (XCHAT_TRANSPORT_MODE=stream).
+    consumer_key: str | None = Field(
+        None, description="X app consumer key (API key). Required for webhook mode HMAC signing."
+    )
+    consumer_secret: SecretStr | None = Field(
+        None, description="X app consumer secret. Required for webhook mode HMAC signing."
+    )
 
     # ── OAuth 2.0 Client credentials — used by auth login (PKCE flow) ──────
     # These appear as "OAuth 2.0 Client ID and Secret" in X Developer Portal.
     # They are DIFFERENT from the API Key & Secret (consumer_key/consumer_secret).
-    # If not set, auth login falls back to consumer_key as client_id.
+    # XCHAT_OAUTH_CLIENT_ID is REQUIRED for `xchat auth login`.
     oauth_client_id: str | None = Field(
         None,
         description=(
             "OAuth 2.0 Client ID from X Developer Portal → your app → Keys and tokens. "
             "DIFFERENT from the API Key (consumer_key). "
-            "Used by `xchat auth login` PKCE flow. "
-            "Falls back to consumer_key if not set."
+            "Required for `xchat auth login` PKCE flow."
         ),
     )
     oauth_client_secret: SecretStr | None = Field(
@@ -98,20 +100,12 @@ class AppSettings(BaseSettings):
         description="OAuth 2.0 refresh token for renewing user_access_token.",
     )
 
-    # ── Legacy OAuth 1.0a tokens (kept for compatibility) ─────────────────
-    # These are NOT used for Activity Stream or DM replies in the XAA flow.
-    # Kept for any OAuth 1.0a-only endpoints you may need.
-    access_token: str | None = Field(
-        None,
-        description=(
-            "Legacy OAuth 1.0a access token. "
-            "NOT used for Activity Stream or DM replies — use user_access_token instead."
-        ),
-    )
-    access_token_secret: SecretStr | None = Field(
-        None,
-        description="Legacy OAuth 1.0a access token secret. See access_token note.",
-    )
+    # ── NOT part of the main flow — ignore unless you need OAuth 1.0a endpoints ──
+    # The XAA / Activity API flow uses Bearer Token + OAuth 2.0 user token only.
+    # These legacy fields are kept so existing .env files with OAuth 1.0a tokens
+    # don't cause validation errors, but xchat itself does not read them.
+    access_token: str | None = Field(None, exclude=True)
+    access_token_secret: SecretStr | None = Field(None, exclude=True)
 
     # ── Transport ─────────────────────────────────────────────────────────
     transport_mode: Literal["stream", "webhook"] = Field(
@@ -217,6 +211,23 @@ class AppSettings(BaseSettings):
     @model_validator(mode="after")
     def expand_data_dir(self) -> AppSettings:
         self.data_dir = self.data_dir.expanduser()
+        return self
+
+    @model_validator(mode="after")
+    def webhook_requires_consumer_credentials(self) -> AppSettings:
+        """consumer_key + consumer_secret are required in webhook mode for HMAC signing."""
+        if self.transport_mode == "webhook":
+            missing: list[str] = []
+            if not self.consumer_key:
+                missing.append("XCHAT_CONSUMER_KEY")
+            if not self.consumer_secret:
+                missing.append("XCHAT_CONSUMER_SECRET")
+            if missing:
+                raise ValueError(
+                    f"{', '.join(missing)} must be set when XCHAT_TRANSPORT_MODE=webhook. "
+                    "These are used for webhook HMAC-SHA256 signature verification. "
+                    "For stream mode, they are not required."
+                )
         return self
 
 

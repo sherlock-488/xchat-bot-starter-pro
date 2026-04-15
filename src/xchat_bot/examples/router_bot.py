@@ -47,7 +47,7 @@ class RouterBot(BotBase):
         bot.register("/help", help_handler)
         bot.register("/ping", ping_handler)
 
-        xchat run --bot bots.router_bot:RouterBot
+        xchat run --bot xchat_bot.examples.router_bot:RouterBot
     """
 
     def __init__(self, settings: AppSettings, reply: ReplyAdapter) -> None:

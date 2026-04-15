@@ -6,7 +6,7 @@ define *what* events you want to receive.
 
 Typical flow:
   1. xchat webhook register --url https://bot.example.com/webhook
-  2. xchat subscriptions create --event-type chat.received
+  2. xchat subscriptions create --user-id <bot_user_id> --event-type chat.received
   3. xchat run --transport webhook
 
 Reference: https://docs.x.com/x-api/direct-messages/activity-stream
@@ -59,7 +59,7 @@ def register(
 
     After registering the webhook, create subscriptions to define what
     events you want to receive:
-      xchat subscriptions create --event-type chat.received
+      xchat subscriptions create --user-id <bot_user_id> --event-type chat.received
     """
     _load_dotenv()
     headers = _bearer_headers()
@@ -98,7 +98,8 @@ def register(
         console.print(
             "X sent a CRC challenge to your URL — if your server responded correctly,\n"
             "the webhook is now active. Next step:\n"
-            "  [cyan]xchat subscriptions create --event-type chat.received[/cyan]"
+            "  [cyan]xchat subscriptions create"
+            " --user-id <bot_user_id> --event-type chat.received[/cyan]"
         )
     elif resp.status_code == 401:
         console.print("[red]Error 401:[/red] Check that XCHAT_BEARER_TOKEN is correct.")

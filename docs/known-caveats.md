@@ -48,14 +48,15 @@ Reply adapter accepts it as an optional parameter.
 
 ---
 
-## Activity Stream Endpoint (EXPERIMENTAL)
+## Activity Stream Endpoint (partially observed)
 
 **Field:** `ActivityStreamTransport._STREAM_ENDPOINT`
 
-**Observation:** Stream endpoint URL follows xchat-bot-python pattern.
-The exact URL and required parameters are not yet fully documented.
+**Status:** The endpoint URL (`GET /2/activity/stream`) is documented. Reconnection
+behavior, heartbeat handling, and some query parameters follow xchat-bot-python
+observations and may not be fully specified in official docs.
 
-**Risk:** URL may change.
+**Risk:** Reconnect parameters or heartbeat format may change.
 
 **Mitigation:** Configurable via constructor parameter `stream_url=` for easy override.
 
@@ -93,6 +94,6 @@ The following are based on official X documentation or well-established patterns
 
 - **CRC challenge** (`GET /webhook?crc_token=xxx`) — documented
 - **Webhook signature** (`x-twitter-webhooks-signature: sha256=...`) — documented
-- **OAuth 1.0a flow** — documented
+- **OAuth 2.0 PKCE flow** (`xchat auth login`) — documented
 - **127.0.0.1 vs localhost distinction** — documented behavior
 - **`STUB_ENC_` crypto format** — internal convention, not X API
