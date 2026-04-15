@@ -75,6 +75,7 @@ def test_save_creates_file(tmp_path: Path) -> None:
 
 def test_save_sets_permissions(tmp_path: Path) -> None:
     import stat
+
     state_file = tmp_path / "state.json"
     manager = StateManager(state_file)
     manager.save()

@@ -143,9 +143,7 @@ class AppSettings(BaseSettings):
     )
     max_retries: int = Field(5, ge=0, le=20, description="Max retry attempts for transient errors")
     retry_backoff_base: float = Field(1.0, ge=0.1, description="Base backoff multiplier (seconds)")
-    retry_backoff_max: float = Field(
-        60.0, ge=1.0, description="Maximum backoff cap (seconds)"
-    )
+    retry_backoff_max: float = Field(60.0, ge=1.0, description="Maximum backoff cap (seconds)")
 
     # ── Event dedup ───────────────────────────────────────────────────────
     dedup_max_size: int = Field(

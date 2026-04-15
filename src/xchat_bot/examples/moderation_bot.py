@@ -37,11 +37,13 @@ from xchat_bot.events.models import NormalizedEvent
 from xchat_bot.reply.adapter import ReplyAdapter
 
 # Default blocklist — extend for your use case
-DEFAULT_BLOCKLIST: frozenset[str] = frozenset([
-    "spam",
-    "phishing",
-    "click here",
-])
+DEFAULT_BLOCKLIST: frozenset[str] = frozenset(
+    [
+        "spam",
+        "phishing",
+        "click here",
+    ]
+)
 
 
 class ModerationBot(BotBase):

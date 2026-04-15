@@ -71,9 +71,7 @@ def explain_signature(payload: bytes, consumer_secret: str) -> dict[str, str | i
     ).digest()
     b64 = base64.b64encode(raw_digest).decode("utf-8")
     key_preview = (
-        f"{consumer_secret[:4]}...{consumer_secret[-4:]}"
-        if len(consumer_secret) > 8
-        else "****"
+        f"{consumer_secret[:4]}...{consumer_secret[-4:]}" if len(consumer_secret) > 8 else "****"
     )
     return {
         "algorithm": "HMAC-SHA256",

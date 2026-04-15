@@ -133,9 +133,7 @@ class ActivityStreamTransport(Transport):
         log = log.bind(connection_id=connection_id)
 
         bearer = (
-            self._settings.bearer_token.get_secret_value()
-            if self._settings.bearer_token
-            else ""
+            self._settings.bearer_token.get_secret_value() if self._settings.bearer_token else ""
         )
         if not bearer:
             raise AuthError(

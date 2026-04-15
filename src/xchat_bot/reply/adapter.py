@@ -73,6 +73,7 @@ class LoggingReplyAdapter:
 
     def __init__(self) -> None:
         import structlog
+
         self._log = structlog.get_logger(__name__)
 
     async def send_reply(

@@ -15,9 +15,7 @@ def unlock(
     state_file: Path = typer.Option(
         Path("state.json"), "--state-file", help="Path to write state.json"
     ),
-    force: bool = typer.Option(
-        False, "--force", help="Overwrite existing state.json"
-    ),
+    force: bool = typer.Option(False, "--force", help="Overwrite existing state.json"),
 ) -> None:
     """Retrieve E2EE private keys and write to state.json.
 
@@ -48,8 +46,11 @@ def unlock(
             access_token=settings.access_token or "",
             consumer_key=settings.consumer_key,
             consumer_secret=settings.consumer_secret.get_secret_value(),
-            access_token_secret=(settings.access_token_secret.get_secret_value()
-                                  if settings.access_token_secret else ""),
+            access_token_secret=(
+                settings.access_token_secret.get_secret_value()
+                if settings.access_token_secret
+                else ""
+            ),
             state_file=state_file,
             force=force,
         )
@@ -71,6 +72,7 @@ def _load_dotenv() -> None:
     if env_file.exists():
         try:
             from dotenv import load_dotenv
+
             load_dotenv(env_file, override=False)
         except ImportError:
             pass

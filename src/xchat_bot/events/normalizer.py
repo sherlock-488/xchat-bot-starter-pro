@@ -79,11 +79,13 @@ class EventNormalizer:
             conversation_key_version=key_ver,
         )
 
-        event_id = _stable_event_id([
-            conv_id or "",
-            (encoded or "")[:32],
-            event_type,
-        ])
+        event_id = _stable_event_id(
+            [
+                conv_id or "",
+                (encoded or "")[:32],
+                event_type,
+            ]
+        )
 
         is_stub = bool(encoded and encoded.startswith("STUB_"))
 
@@ -135,9 +137,7 @@ class EventNormalizer:
         if msg_id:
             event_id = _stable_event_id([msg_id, event_type])
         else:
-            event_id = _stable_event_id([
-                json.dumps(raw, sort_keys=True, ensure_ascii=False)
-            ])
+            event_id = _stable_event_id([json.dumps(raw, sort_keys=True, ensure_ascii=False)])
 
         is_stub = bool(enc_content and enc_content.startswith("STUB_"))
 
@@ -160,9 +160,7 @@ class EventNormalizer:
 
     def _normalize_unknown(self, raw: dict[str, Any]) -> NormalizedEvent:
         """Handle unrecognized formats gracefully."""
-        event_id = _stable_event_id([
-            json.dumps(raw, sort_keys=True, ensure_ascii=False)
-        ])
+        event_id = _stable_event_id([json.dumps(raw, sort_keys=True, ensure_ascii=False)])
         return NormalizedEvent(
             event_id=event_id,
             event_type="unknown",

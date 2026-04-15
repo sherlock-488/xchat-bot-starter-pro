@@ -11,6 +11,7 @@ from xchat_bot.auth.unlock import run_unlock_flow
 
 # ── run_unlock_flow creates a valid state file ─────────────────────────────────
 
+
 async def test_run_unlock_flow_creates_state_file(tmp_path: Path):
     state_file = tmp_path / "state.json"
     await run_unlock_flow(

@@ -34,7 +34,7 @@ A starting point for teams building serious XChat bots. It gives you:
 
 - **Clean architecture**: config → auth → transport → events → crypto → bot → reply
 - **Dual transport**: Activity Stream (persistent connection) and Webhook (X POSTs to you), both feeding the same bot logic
-- **Strong CLI**: `xchat doctor`, `xchat auth login`, `xchat run`, `xchat inspect`, `xchat replay`
+- **Strong CLI**: `xchat doctor`, `xchat auth login`, `xchat webhook`, `xchat subscriptions`, `xchat run`, `xchat inspect`, `xchat replay`
 - **Production hygiene**: structured logging, retry/backoff, deduplication, health endpoints, Docker, CI
 - **5 example bots**: echo, router, draft-reply, moderation, handoff
 
@@ -58,13 +58,17 @@ uv sync
 
 # 2. Configure
 cp .env.example .env
-# Edit .env: set XCHAT_CONSUMER_KEY and XCHAT_CONSUMER_SECRET
+# Edit .env:
+#   XCHAT_CONSUMER_KEY=...      (X app API key)
+#   XCHAT_CONSUMER_SECRET=...   (X app API secret)
+#   XCHAT_BEARER_TOKEN=...      (App Bearer Token — for Activity Stream)
 
 # 3. Validate setup
 xchat doctor
 
-# 4. Authenticate
+# 4. Authenticate (OAuth 2.0 PKCE — opens browser, saves user access token)
 xchat auth login
+# This writes XCHAT_USER_ACCESS_TOKEN to .env automatically.
 
 # 5. Run your first bot
 xchat run
@@ -144,21 +148,34 @@ That's it. `BotBase` provides `reply_to()`, `on_start()`, `on_stop()`, and `on_e
 ## CLI Reference
 
 ```
-xchat init                          Initialize project directory
-xchat doctor [--check-connectivity] Validate environment (12+ checks)
-xchat auth login [--scopes TEXT]    OAuth 2.0 login (obtains user access token)
-xchat auth status                   Show auth status
-xchat unlock [--state-file PATH]    Get E2EE keys → state.json
-xchat subscribe --url URL           Register webhook with X
-xchat run [OPTIONS]                 Start bot
-  --bot MODULE:CLASS                Bot to run (default: xchat_bot.examples.echo_bot:EchoBot)
-  --transport stream|webhook        Override transport mode
-  --crypto stub|real                Override crypto mode
-xchat inspect FIXTURE [--decrypt]   Parse and display fixture file
-xchat replay run FIXTURE            Replay events to webhook URL
-xchat replay diff FIXTURE           Compare two webhook handlers
-xchat replay export                 Export events from running server
-xchat version                       Print version
+xchat init                              Initialize project directory
+xchat doctor [--check-connectivity]     Validate environment (14+ checks)
+xchat auth login [--scopes TEXT]        OAuth 2.0 PKCE login → XCHAT_USER_ACCESS_TOKEN
+xchat auth status                       Show auth status
+xchat unlock [--state-file PATH]        Get E2EE keys → state.json (EXPERIMENTAL)
+
+# Webhook management (webhook transport mode)
+xchat webhook register --url URL        Register webhook URL (POST /2/webhooks)
+xchat webhook list                      List registered webhooks
+xchat webhook delete WEBHOOK_ID         Delete a webhook
+
+# Activity subscriptions (what events to receive)
+xchat subscriptions create              Create a subscription (POST /2/activity/subscriptions)
+  --event-type chat.received            Event type (default: chat.received)
+  --tag TEXT                            Optional label
+  --webhook-id ID                       Associate with a webhook (webhook mode)
+xchat subscriptions list                List current subscriptions
+xchat subscriptions delete SUB_ID       Delete a subscription
+
+xchat run [OPTIONS]                     Start bot
+  --bot MODULE:CLASS                    Bot to run (default: xchat_bot.examples.echo_bot:EchoBot)
+  --transport stream|webhook            Override transport mode
+  --crypto stub|real                    Override crypto mode
+xchat inspect FIXTURE [--decrypt]       Parse and display fixture file
+xchat replay run FIXTURE                Replay events to webhook URL
+xchat replay diff FIXTURE               Compare two webhook handlers
+xchat replay export                     Export events from running server
+xchat version                           Print version
 ```
 
 ---

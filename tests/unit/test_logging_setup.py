@@ -6,6 +6,7 @@ from xchat_bot.logging.setup import bind_request_id, configure_logging
 
 # ── configure_logging ──────────────────────────────────────────────────────────
 
+
 def test_configure_logging_info_console_does_not_raise():
     configure_logging("INFO", "console")
 
@@ -27,6 +28,7 @@ def test_configure_logging_critical_console_does_not_raise():
 
 
 # ── bind_request_id ────────────────────────────────────────────────────────────
+
 
 def test_bind_request_id_does_not_raise():
     with bind_request_id():

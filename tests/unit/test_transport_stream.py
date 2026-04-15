@@ -96,6 +96,7 @@ async def test_process_line_stub_crypto_sets_is_stub(
     log = _make_log()
 
     from xchat_bot.crypto.stub import StubCrypto
+
     stub_payload = StubCrypto().encrypt("hello")
 
     raw = {

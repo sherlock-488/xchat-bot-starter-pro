@@ -18,9 +18,7 @@ def inspect(
     state_file: Path = typer.Option(
         Path("state.json"), "--state-file", help="Path to state.json for real decryption"
     ),
-    crypto_mode: str = typer.Option(
-        "stub", "--crypto", help="Crypto mode: stub or real"
-    ),
+    crypto_mode: str = typer.Option("stub", "--crypto", help="Crypto mode: stub or real"),
 ) -> None:
     """Parse and display a fixture file.
 
@@ -83,11 +81,13 @@ def inspect(
                         encoded_event=payload,
                         encrypted_conversation_key=enc.encrypted_conversation_key,
                     )
-                    event = event.model_copy(update={
-                        "plaintext": result.plaintext,
-                        "is_stub": result.mode == "stub",
-                        "decrypt_notes": result.notes,
-                    })
+                    event = event.model_copy(
+                        update={
+                            "plaintext": result.plaintext,
+                            "is_stub": result.mode == "stub",
+                            "decrypt_notes": result.notes,
+                        }
+                    )
 
         info_lines = [
             f"[bold]event_id:[/bold]       {event.event_id}",
@@ -103,10 +103,12 @@ def inspect(
         if event.decrypt_notes:
             info_lines.append(f"[bold]decrypt_notes:[/bold]  [dim]{event.decrypt_notes}[/dim]")
 
-        console.print(Panel(
-            "\n".join(info_lines),
-            title=f"Event {i + 1}",
-            border_style="blue",
-        ))
+        console.print(
+            Panel(
+                "\n".join(info_lines),
+                title=f"Event {i + 1}",
+                border_style="blue",
+            )
+        )
 
     console.print()

@@ -113,6 +113,7 @@ def bind_request_id(request_id: str | None = None) -> Generator[str, None, None]
             # All log entries in this block include request_id=rid
     """
     import secrets
+
     rid = request_id or secrets.token_hex(8)
     structlog.contextvars.bind_contextvars(request_id=rid)
     try:

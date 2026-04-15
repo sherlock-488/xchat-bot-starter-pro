@@ -24,9 +24,7 @@ def run(
     transport: str = typer.Option(
         "", "--transport", help="Override transport mode: stream or webhook"
     ),
-    crypto: str = typer.Option(
-        "", "--crypto", help="Override crypto mode: stub or real"
-    ),
+    crypto: str = typer.Option("", "--crypto", help="Override crypto mode: stub or real"),
     host: str = typer.Option("", "--host", help="Webhook host (webhook mode only)"),
     port: int = typer.Option(0, "--port", help="Webhook port (webhook mode only)"),
     reload: bool = typer.Option(False, "--reload", help="Enable uvicorn reload (dev only)"),
@@ -79,7 +77,9 @@ def run(
     console.print(f"  Transport: [cyan]{settings.transport_mode}[/cyan]")
     console.print(f"  Crypto: [cyan]{settings.crypto_mode}[/cyan]")
     if settings.transport_mode == "webhook":
-        console.print(f"  Webhook: [cyan]http://{settings.webhook_host}:{settings.webhook_port}{settings.webhook_path}[/cyan]")
+        console.print(
+            f"  Webhook: [cyan]http://{settings.webhook_host}:{settings.webhook_port}{settings.webhook_path}[/cyan]"
+        )
     console.print()
 
     asyncio.run(_run_bot(bot_instance, settings))
@@ -142,6 +142,7 @@ async def _run_bot(bot: object, settings: object) -> None:
         transport = ActivityStreamTransport(settings, normalizer, deduplicator, crypto)
 
     from xchat_bot.bot.base import BotBase
+
     assert isinstance(bot, BotBase)
 
     await bot.on_start()
@@ -159,6 +160,7 @@ def _load_dotenv() -> None:
     if env_file.exists():
         try:
             from dotenv import load_dotenv
+
             load_dotenv(env_file, override=False)
         except ImportError:
             pass

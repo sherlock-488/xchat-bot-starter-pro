@@ -129,20 +129,14 @@ class NormalizedEvent(BaseModel):
     )
 
     # ── Timing ────────────────────────────────────────────────────────────
-    received_at: datetime = Field(
-        description="When our server/stream received this event (UTC)"
-    )
+    received_at: datetime = Field(description="When our server/stream received this event (UTC)")
     created_at: datetime | None = Field(
         None, description="Event creation time from payload, if present (UTC)"
     )
 
     # ── Participants ──────────────────────────────────────────────────────
-    conversation_id: str | None = Field(
-        None, description="Conversation/DM conversation identifier"
-    )
-    sender_id: str | None = Field(
-        None, description="X user ID of the message sender"
-    )
+    conversation_id: str | None = Field(None, description="Conversation/DM conversation identifier")
+    sender_id: str | None = Field(None, description="X user ID of the message sender")
     for_user_id: str | None = Field(
         None,
         description=(

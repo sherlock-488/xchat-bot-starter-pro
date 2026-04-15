@@ -58,9 +58,7 @@ class RealCrypto:
         try:
             self._state = json.loads(self._state_file.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
-            raise ValueError(
-                f"state.json at {self._state_file} is not valid JSON: {exc}"
-            ) from exc
+            raise ValueError(f"state.json at {self._state_file} is not valid JSON: {exc}") from exc
 
         if "private_keys" not in self._state:
             raise ValueError(
@@ -103,8 +101,7 @@ class RealCrypto:
                 mode="real",
                 key_id=None,
                 notes=(
-                    "No private_keys found in state.json. "
-                    "Re-run `xchat unlock` to populate them."
+                    "No private_keys found in state.json. Re-run `xchat unlock` to populate them."
                 ),
             )
 
@@ -134,8 +131,7 @@ class RealCrypto:
     def encrypt(self, plaintext: str) -> str:
         """Not implemented for real crypto — use StubCrypto for test fixtures."""
         raise NotImplementedError(
-            "RealCrypto.encrypt() is not implemented. "
-            "Use StubCrypto for generating test fixtures."
+            "RealCrypto.encrypt() is not implemented. Use StubCrypto for generating test fixtures."
         )
 
     def get_latest_key(self) -> tuple[str, str] | None:

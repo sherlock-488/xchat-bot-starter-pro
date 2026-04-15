@@ -48,7 +48,7 @@ class StubCrypto:
             DecryptResult with decoded plaintext, or a placeholder for real payloads.
         """
         if encoded_event.startswith(STUB_PREFIX):
-            b64_part = encoded_event[len(STUB_PREFIX):]
+            b64_part = encoded_event[len(STUB_PREFIX) :]
             try:
                 plaintext = base64.b64decode(b64_part).decode("utf-8")
                 return DecryptResult(

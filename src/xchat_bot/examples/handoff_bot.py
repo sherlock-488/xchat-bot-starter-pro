@@ -47,15 +47,17 @@ from xchat_bot.reply.adapter import ReplyAdapter
 ESCALATIONS_DIR = Path("escalations")
 ESCALATION_FILE = ESCALATIONS_DIR / "queue.jsonl"
 
-DEFAULT_TRIGGERS: frozenset[str] = frozenset([
-    "human",
-    "agent",
-    "speak to someone",
-    "real person",
-    "urgent",
-    "emergency",
-    "help me",
-])
+DEFAULT_TRIGGERS: frozenset[str] = frozenset(
+    [
+        "human",
+        "agent",
+        "speak to someone",
+        "real person",
+        "urgent",
+        "emergency",
+        "help me",
+    ]
+)
 
 ESCALATION_REPLY = (
     "I'm connecting you with a human team member who will follow up shortly. "

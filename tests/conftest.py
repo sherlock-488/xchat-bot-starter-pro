@@ -96,6 +96,7 @@ def make_event(
 ) -> NormalizedEvent:
     """Factory for NormalizedEvent objects in tests."""
     from datetime import datetime
+
     return NormalizedEvent(
         event_id=event_id,
         event_type=event_type,

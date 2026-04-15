@@ -15,6 +15,7 @@ from xchat_bot.transport.base import (
 
 # ── Exception hierarchy ────────────────────────────────────────────────────────
 
+
 def test_transport_error_is_exception():
     assert issubclass(TransportError, Exception)
 
@@ -52,12 +53,14 @@ def test_stream_disconnected_can_be_raised():
 
 # ── Transport ABC cannot be instantiated directly ──────────────────────────────
 
+
 def test_transport_abc_cannot_be_instantiated():
     with pytest.raises(TypeError):
         Transport()  # type: ignore[abstract]
 
 
 # ── Concrete subclass ──────────────────────────────────────────────────────────
+
 
 class ConcreteTransport(Transport):
     """Minimal concrete implementation of Transport for testing."""
@@ -97,6 +100,7 @@ async def test_concrete_transport_run_does_not_raise():
 
 
 # ── Subclass missing abstract method cannot be instantiated ───────────────────
+
 
 def test_incomplete_subclass_cannot_be_instantiated():
     class IncompleteTransport(Transport):

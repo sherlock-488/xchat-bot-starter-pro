@@ -6,7 +6,9 @@ Usage:
     xchat init
     xchat doctor
     xchat auth login
-    xchat run --bot bots.echo_bot:EchoBot
+    xchat webhook register --url https://...
+    xchat subscriptions create --event-type chat.received
+    xchat run
 """
 
 from __future__ import annotations
@@ -28,16 +30,18 @@ from xchat_bot.cli import (  # noqa: E402
     cmd_inspect,
     cmd_replay,
     cmd_run,
-    cmd_subscribe,
+    cmd_subscriptions,
     cmd_unlock,
+    cmd_webhook,
 )
 
 app.add_typer(cmd_auth.app, name="auth")
 app.add_typer(cmd_replay.app, name="replay")
+app.add_typer(cmd_webhook.app, name="webhook")
+app.add_typer(cmd_subscriptions.app, name="subscriptions")
 app.command("init")(cmd_init.init)
 app.command("doctor")(cmd_doctor.doctor)
 app.command("unlock")(cmd_unlock.unlock)
-app.command("subscribe")(cmd_subscribe.subscribe)
 app.command("run")(cmd_run.run)
 app.command("inspect")(cmd_inspect.inspect)
 
@@ -46,4 +50,5 @@ app.command("inspect")(cmd_inspect.inspect)
 def version() -> None:
     """Print version information."""
     from xchat_bot import __version__
+
     typer.echo(f"xchat-bot-starter-pro {__version__}")

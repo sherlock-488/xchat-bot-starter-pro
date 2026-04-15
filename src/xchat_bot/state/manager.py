@@ -49,8 +49,7 @@ class StateManager:
         """
         if not self._state_file.exists():
             raise FileNotFoundError(
-                f"state.json not found at {self._state_file}. "
-                "Run `xchat unlock` to generate it."
+                f"state.json not found at {self._state_file}. Run `xchat unlock` to generate it."
             )
         try:
             self._state = json.loads(self._state_file.read_text(encoding="utf-8"))

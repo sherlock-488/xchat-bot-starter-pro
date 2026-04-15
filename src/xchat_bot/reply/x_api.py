@@ -36,9 +36,7 @@ logger = structlog.get_logger(__name__)
 
 # X v2 DM conversations endpoint.
 # EXPERIMENTAL: Exact path and body format observed from xchat-bot-python.
-_REPLY_ENDPOINT_TEMPLATE = (
-    "https://api.x.com/2/dm_conversations/{conversation_id}/messages"
-)
+_REPLY_ENDPOINT_TEMPLATE = "https://api.x.com/2/dm_conversations/{conversation_id}/messages"
 
 
 class XApiReplyAdapter:

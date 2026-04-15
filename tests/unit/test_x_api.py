@@ -11,6 +11,7 @@ from xchat_bot.reply.x_api import XApiReplyAdapter, _parse_int_header
 
 # ── _parse_int_header ──────────────────────────────────────────────────────────
 
+
 def test_parse_int_header_none_returns_none():
     assert _parse_int_header(None) is None
 
@@ -40,6 +41,7 @@ def test_parse_int_header_large_number():
 
 
 # ── send_reply with no user_access_token ──────────────────────────────────────
+
 
 @pytest.fixture
 def settings_no_token() -> AppSettings:
@@ -94,6 +96,7 @@ async def test_send_reply_no_token_with_mock_settings(mock_settings: AppSettings
 @pytest.fixture
 def settings_with_token() -> AppSettings:
     from pydantic import SecretStr
+
     s = AppSettings(
         consumer_key="k",
         consumer_secret="s",

@@ -112,6 +112,7 @@ class BotBase(ABC):
                 event_type=event.event_type,
             )
             from xchat_bot.reply.adapter import ReplyResult
+
             return ReplyResult(success=False, error="No conversation_id on event")
 
         return await self.reply.send_reply(

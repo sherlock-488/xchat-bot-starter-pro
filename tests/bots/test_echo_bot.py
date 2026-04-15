@@ -36,6 +36,7 @@ async def test_echo_ignores_no_plaintext(echo_bot, mock_reply) -> None:
 
 async def test_echo_handles_reply_failure(echo_bot, mock_reply) -> None:
     from xchat_bot.reply.adapter import ReplyResult
+
     mock_reply.send_reply.return_value = ReplyResult(success=False, error="API error")
 
     event = make_event(event_type="chat.received", plaintext="Hello!")

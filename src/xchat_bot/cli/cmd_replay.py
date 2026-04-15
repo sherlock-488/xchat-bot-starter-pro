@@ -40,6 +40,7 @@ def replay_run(
     consumer_secret = ""
     if sign:
         import os
+
         consumer_secret = os.getenv("XCHAT_CONSUMER_SECRET", "")
         if not consumer_secret:
             console.print("[red]--sign requires XCHAT_CONSUMER_SECRET to be set[/red]")
@@ -47,6 +48,7 @@ def replay_run(
 
     async def _run() -> list[dict[str, Any]]:
         import httpx
+
         results: list[dict[str, Any]] = []
         async with httpx.AsyncClient(timeout=10.0) as client:
             for event in events:
@@ -57,25 +59,28 @@ def replay_run(
                         payload, consumer_secret
                     )
 
-                event_type = (
-                    event.get("data", {}).get("event_type")
-                    or event.get("event_type", "unknown")
+                event_type = event.get("data", {}).get("event_type") or event.get(
+                    "event_type", "unknown"
                 )
                 try:
                     resp = await client.post(target, content=payload, headers=headers)
-                    results.append({
-                        "event_type": event_type,
-                        "status": resp.status_code,
-                        "ok": resp.is_success,
-                        "error": None,
-                    })
+                    results.append(
+                        {
+                            "event_type": event_type,
+                            "status": resp.status_code,
+                            "ok": resp.is_success,
+                            "error": None,
+                        }
+                    )
                 except httpx.ConnectError as exc:
-                    results.append({
-                        "event_type": event_type,
-                        "status": None,
-                        "ok": False,
-                        "error": f"Connection refused: {exc}",
-                    })
+                    results.append(
+                        {
+                            "event_type": event_type,
+                            "status": None,
+                            "ok": False,
+                            "error": f"Connection refused: {exc}",
+                        }
+                    )
 
                 if delay > 0:
                     await asyncio.sleep(delay)
@@ -126,6 +131,7 @@ def replay_diff(
 
     async def _run() -> list[dict[str, object]]:
         import httpx
+
         results = []
         async with httpx.AsyncClient(timeout=10.0) as client:
             for event in events:
@@ -147,15 +153,15 @@ def replay_diff(
                 c_status, c_body = await _post(candidate)
                 identical = (b_status, b_body) == (c_status, c_body)
 
-                event_type = (
-                    event.get("data", {}).get("event_type") or event.get("event_type", "?")
+                event_type = event.get("data", {}).get("event_type") or event.get("event_type", "?")
+                results.append(
+                    {
+                        "event_type": event_type,
+                        "baseline": f"{b_status} {b_body[:50]}",
+                        "candidate": f"{c_status} {c_body[:50]}",
+                        "identical": identical,
+                    }
                 )
-                results.append({
-                    "event_type": event_type,
-                    "baseline": f"{b_status} {b_body[:50]}",
-                    "candidate": f"{c_status} {c_body[:50]}",
-                    "identical": identical,
-                })
         return results
 
     results = asyncio.run(_run())
@@ -184,9 +190,7 @@ def replay_diff(
 
 @app.command("export")
 def replay_export(
-    server: str = typer.Option(
-        "http://127.0.0.1:8080", "--server", help="Bot server base URL"
-    ),
+    server: str = typer.Option("http://127.0.0.1:8080", "--server", help="Bot server base URL"),
     output: Path = typer.Option(
         Path("recordings/export.jsonl"), "--output", help="Output JSONL file"
     ),

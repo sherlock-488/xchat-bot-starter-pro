@@ -30,6 +30,7 @@ def app(mock_handler: AsyncMock) -> TestClient:
 
 # ── CRC challenge ─────────────────────────────────────────────────────────────
 
+
 def test_crc_challenge(app: TestClient) -> None:
     resp = app.get("/webhook?crc_token=test_token_123")
     assert resp.status_code == 200
@@ -44,6 +45,7 @@ def test_crc_challenge_missing_token(app: TestClient) -> None:
 
 
 # ── Webhook POST ──────────────────────────────────────────────────────────────
+
 
 def _make_signed_request(app: TestClient, payload: dict) -> tuple:
     body = json.dumps(payload).encode()
@@ -126,6 +128,7 @@ def test_webhook_invalid_json_rejected(app: TestClient) -> None:
 
 # ── Health endpoints ──────────────────────────────────────────────────────────
 
+
 def test_health_endpoint(app: TestClient) -> None:
     resp = app.get("/health")
     assert resp.status_code == 200
@@ -154,6 +157,7 @@ def test_readyz_endpoint_without_handler() -> None:
 
 
 # ── No consumer_secret mode (open webhook) ───────────────────────────────────
+
 
 def test_webhook_no_secret_accepts_unsigned() -> None:
     app_open = create_app(consumer_secret="", handler=None)

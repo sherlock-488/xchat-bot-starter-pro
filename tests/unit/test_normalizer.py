@@ -98,9 +98,7 @@ def test_event_id_is_deterministic(norm: EventNormalizer) -> None:
 def test_demo_event_id_uses_message_id(norm: EventNormalizer) -> None:
     raw = {
         "event_type": "chat.received",
-        "direct_message_events": [
-            {"id": "unique_msg_id", "event_type": "MessageCreate"}
-        ],
+        "direct_message_events": [{"id": "unique_msg_id", "event_type": "MessageCreate"}],
     }
     event = norm.normalize(raw)
     # event_id should incorporate the message ID

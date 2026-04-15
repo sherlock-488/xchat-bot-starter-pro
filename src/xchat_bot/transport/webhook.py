@@ -84,11 +84,13 @@ class WebhookTransport(Transport):
                     encoded_event=enc.encoded_event or enc.encrypted_content or "",
                     encrypted_conversation_key=event.encrypted.encrypted_conversation_key,
                 )
-                event = event.model_copy(update={
-                    "plaintext": result.plaintext,
-                    "is_stub": event.is_stub or (result.mode == "stub"),
-                    "decrypt_notes": result.notes,
-                })
+                event = event.model_copy(
+                    update={
+                        "plaintext": result.plaintext,
+                        "is_stub": event.is_stub or (result.mode == "stub"),
+                        "decrypt_notes": result.notes,
+                    }
+                )
 
             await handler(event)
 
