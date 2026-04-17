@@ -8,7 +8,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 # Copy lock file + manifest first for layer caching
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 # Create a minimal package stub so uv sync can resolve the local package
 RUN mkdir -p src/xchat_bot && touch src/xchat_bot/__init__.py
 
