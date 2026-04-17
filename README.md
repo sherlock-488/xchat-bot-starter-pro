@@ -297,6 +297,13 @@ pyright src/
 
 ---
 
+## Related
+
+**Need local replay, CRC debugging, or webhook signature testing?**
+→ [xchat-playground](https://github.com/sherlock-488/xchat-playground) — offline simulator, replay lab, repro packs, web UI. Zero API credits burned.
+
+---
+
 ## Contributing
 
 1. Fork the repo
