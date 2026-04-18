@@ -29,7 +29,8 @@ class EncryptedPayload(BaseModel):
     """Encrypted message material — populated before decryption.
 
     Fields from the observed XAA envelope (data.payload.*) are the primary
-    source (inferred from xchat-bot-python; not yet fully in docs.x.com). Fields from the demo schema are labeled EXPERIMENTAL.
+    source (inferred from xchat-bot-python; not yet fully in docs.x.com).
+    Fields from the demo schema are labeled EXPERIMENTAL.
     """
 
     # Observed XAA envelope fields (inferred from xchat-bot-python)

@@ -4,16 +4,21 @@ Activity subscriptions define *what* events your app receives. They are
 separate from webhook registration (which defines *where* events are sent).
 
 A subscription specifies:
-  - event_type: e.g. "chat.received", "chat.sent"
-  - Optional: filter, tag, webhook_id
+  - event_type: e.g. "chat.received", "profile.update.bio"
+  - filter: user_id, keyword, direction, etc.
+  - Optional: tag, webhook_id
+
+Auth model:
+  - Public events (profile.update.*, follow.*, spaces.*): use app Bearer Token (--auth app)
+  - Private events (chat.*, dm.*): require OAuth 2.0 user access token (--auth user)
+  - --auth auto (default): picks the right token automatically based on event_type
 
 Typical flow:
-  1. xchat webhook register --url https://bot.example.com/webhook
-  2. xchat subscriptions create --user-id <bot_user_id> --event-type chat.received
-  3. xchat run --transport webhook
+  # Public smoke test (no OAuth needed)
+  xchat subscriptions create --event-type profile.update.bio --user-id <id> --tag "smoke"
 
-For Activity Stream mode (no webhook), subscriptions are still needed
-to tell X which events to include in your stream.
+  # Private XChat events (requires xchat auth login first)
+  xchat subscriptions create --event-type chat.received --user-id <bot_user_id>
 
 Reference: https://docs.x.com/x-api/direct-messages/activity-stream
 """
@@ -33,20 +38,69 @@ console = Console()
 # X Activity Subscriptions API v2
 _SUBSCRIPTIONS_URL = "https://api.x.com/2/activity/subscriptions"
 
+# Known XAA event types (from official docs.x.com)
+_KNOWN_EVENT_TYPES: set[str] = {
+    "profile.update.bio",
+    "profile.update.profile_picture",
+    "profile.update.banner_picture",
+    "profile.update.screenname",
+    "profile.update.geo",
+    "profile.update.url",
+    "profile.update.verified_badge",
+    "profile.update.affiliate_badge",
+    "profile.update.handle",
+    "follow.follow",
+    "follow.unfollow",
+    "spaces.start",
+    "spaces.end",
+    "chat.received",
+    "chat.sent",
+    "chat.conversation_join",
+    "dm.sent",
+    "dm.received",
+    "dm.indicate_typing",
+    "dm.read",
+    "news.new",
+}
 
-def _bearer_headers() -> dict[str, str]:
-    bearer_token = os.environ.get("XCHAT_BEARER_TOKEN", "")
-    if not bearer_token:
-        console.print(
-            "[red]Error:[/red] XCHAT_BEARER_TOKEN is not set. "
-            "The subscriptions API requires the app Bearer Token. "
-            "Set it in .env or as an environment variable."
-        )
-        raise typer.Exit(code=1)
-    return {
-        "Authorization": f"Bearer {bearer_token}",
-        "Content-Type": "application/json",
-    }
+# Private event prefixes — require OAuth 2.0 user token
+_PRIVATE_EVENT_PREFIXES = ("chat.", "dm.")
+
+
+def _is_private_event(event_type: str) -> bool:
+    return event_type.startswith(_PRIVATE_EVENT_PREFIXES)
+
+
+def _auth_headers(auth_mode: str, event_type: str) -> dict[str, str]:
+    """Return auth headers for the given mode and event type.
+
+    auth_mode:
+      "auto"  — use user token for private events, bearer token for public
+      "user"  — always use XCHAT_USER_ACCESS_TOKEN
+      "app"   — always use XCHAT_BEARER_TOKEN
+    """
+    if auth_mode == "auto":
+        auth_mode = "user" if _is_private_event(event_type) else "app"
+
+    if auth_mode == "user":
+        token = os.environ.get("XCHAT_USER_ACCESS_TOKEN", "")
+        if not token:
+            console.print(
+                "[red]Error:[/red] XCHAT_USER_ACCESS_TOKEN is not set. "
+                f"'{event_type}' is a private event and requires an OAuth 2.0 user token. "
+                "Run: [cyan]xchat auth login[/cyan]"
+            )
+            raise typer.Exit(code=1)
+        return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    else:  # app
+        token = os.environ.get("XCHAT_BEARER_TOKEN", "")
+        if not token:
+            console.print(
+                "[red]Error:[/red] XCHAT_BEARER_TOKEN is not set. "
+                "Set it in .env or as an environment variable."
+            )
+            raise typer.Exit(code=1)
+        return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
 
 @app.command("create")
@@ -54,15 +108,29 @@ def create(
     event_type: str = typer.Option(
         "chat.received",
         "--event-type",
-        help="Event type to subscribe to (e.g. chat.received, chat.sent)",
+        help=(
+            "Event type to subscribe to. "
+            "Public: profile.update.bio, follow.follow, spaces.start, news.new, ... "
+            "Private (requires --auth user): chat.received, chat.sent, dm.received, ..."
+        ),
     ),
-    user_id: str = typer.Option(
-        ...,
+    user_id: str | None = typer.Option(
+        None,
         "--user-id",
         help=(
-            "Your bot's X user ID (numeric). Required by the filter field. "
+            "X user ID for filter.user_id. Required for most event types. "
             "Find it at: https://developer.x.com/en/docs/twitter-api/users/lookup/api-reference"
         ),
+    ),
+    keyword: str | None = typer.Option(
+        None,
+        "--keyword",
+        help="Keyword filter (e.g. for news.new events)",
+    ),
+    direction: str | None = typer.Option(
+        None,
+        "--direction",
+        help="Direction filter (e.g. 'incoming' or 'outgoing')",
     ),
     tag: str | None = typer.Option(
         None,
@@ -74,44 +142,88 @@ def create(
         "--webhook-id",
         help="Webhook ID to associate this subscription with (webhook mode only)",
     ),
+    auth: str = typer.Option(
+        "auto",
+        "--auth",
+        help=(
+            "Auth mode: 'auto' (default) uses OAuth user token for chat/dm private events "
+            "and app Bearer Token for public events. "
+            "'user' forces user token. 'app' forces Bearer Token."
+        ),
+    ),
 ) -> None:
     """Create an Activity API subscription (POST /2/activity/subscriptions).
 
-    This tells X which event types to deliver to your bot. The filter.user_id
-    field is required by the API to scope events to your bot account.
+    This tells X which event types to deliver to your bot.
 
-    Common event types:
-      chat.received          — incoming DM (the main one for bots)
-      chat.sent              — outgoing DM confirmation
-      chat.conversation_join — joined a conversation
+    Auth is selected automatically:
+      - Public events (profile.update.*, follow.*, spaces.*): app Bearer Token
+      - Private events (chat.*, dm.*): OAuth 2.0 user token (xchat auth login)
 
-    Prerequisites:
-      - XCHAT_BEARER_TOKEN set (app Bearer Token)
-      - For webhook mode: register a webhook first with:
-          xchat webhook register --url https://...
+    Examples:
+      # Public smoke test — no OAuth needed
+      xchat subscriptions create --event-type profile.update.bio --user-id 2244994945 --tag "smoke"
 
-    Example:
-      xchat subscriptions create --user-id 123456789 --event-type chat.received
+      # Private XChat events — requires xchat auth login first
+      xchat subscriptions create --event-type chat.received --user-id <bot_user_id>
+
+      # Keyword subscription
+      xchat subscriptions create --event-type news.new --keyword "AI" --tag "AI news"
     """
     _load_dotenv()
-    headers = _bearer_headers()
+
+    # Warn on unknown event types (not a hard error — API may accept new types)
+    if event_type not in _KNOWN_EVENT_TYPES:
+        console.print(
+            f"[yellow]Warning:[/yellow] '{event_type}' is not in the known event type list. "
+            "Proceeding anyway — the API may accept it."
+        )
+
+    headers = _auth_headers(auth, event_type)
+
+    # Build filter
+    filter_: dict[str, str] = {}
+    if user_id:
+        filter_["user_id"] = user_id
+    if keyword:
+        filter_["keyword"] = keyword
+    if direction:
+        filter_["direction"] = direction
+
+    if not filter_:
+        console.print(
+            "[red]Error:[/red] At least one filter field is required "
+            "(--user-id, --keyword, or --direction)."
+        )
+        raise typer.Exit(code=1)
 
     body: dict[str, object] = {
         "event_type": event_type,
-        "filter": {"user_id": user_id},
+        "filter": filter_,
     }
     if tag:
         body["tag"] = tag
     if webhook_id:
         body["webhook_id"] = webhook_id
 
+    # Determine which auth was actually used
+    effective_auth = "user" if _is_private_event(event_type) and auth == "auto" else auth
+    if auth == "auto":
+        effective_auth = "user" if _is_private_event(event_type) else "app"
+
     console.print("\n[bold]xchat subscriptions create[/bold]")
     console.print(f"  Event type : [cyan]{event_type}[/cyan]")
-    console.print(f"  User ID    : [cyan]{user_id}[/cyan]")
+    if user_id:
+        console.print(f"  User ID    : [cyan]{user_id}[/cyan]")
+    if keyword:
+        console.print(f"  Keyword    : [cyan]{keyword}[/cyan]")
+    if direction:
+        console.print(f"  Direction  : [cyan]{direction}[/cyan]")
     if tag:
         console.print(f"  Tag        : [cyan]{tag}[/cyan]")
     if webhook_id:
         console.print(f"  Webhook ID : [cyan]{webhook_id}[/cyan]")
+    console.print(f"  Auth       : [dim]{effective_auth}[/dim]")
     console.print()
 
     try:
@@ -127,7 +239,6 @@ def create(
 
     if resp.status_code in (200, 201):
         data = resp.json()
-        # Official response shape: {"data": {"subscription": {"subscription_id": "..."}}}
         sub_id = (
             data.get("data", {}).get("subscription", {}).get("subscription_id")
             or data.get("data", {}).get("subscription_id")
@@ -137,7 +248,13 @@ def create(
         if sub_id:
             console.print(f"  Subscription ID: [cyan]{sub_id}[/cyan]")
     elif resp.status_code == 401:
-        console.print("[red]Error 401:[/red] Check that XCHAT_BEARER_TOKEN is correct.")
+        if _is_private_event(event_type):
+            console.print(
+                "[red]Error 401:[/red] OAuth user token rejected. "
+                "Run [cyan]xchat auth login[/cyan] to re-authenticate."
+            )
+        else:
+            console.print("[red]Error 401:[/red] Check that XCHAT_BEARER_TOKEN is correct.")
         raise typer.Exit(code=1)
     elif resp.status_code == 403:
         console.print(
@@ -154,7 +271,7 @@ def create(
 def list_subscriptions() -> None:
     """List current Activity API subscriptions (GET /2/activity/subscriptions)."""
     _load_dotenv()
-    headers = _bearer_headers()
+    headers = _auth_headers("app", "")
 
     console.print("\n[bold]Current subscriptions[/bold]")
     try:
@@ -187,7 +304,7 @@ def delete(
 ) -> None:
     """Delete an Activity API subscription (DELETE /2/activity/subscriptions/{id})."""
     _load_dotenv()
-    headers = _bearer_headers()
+    headers = _auth_headers("app", "")
 
     console.print(f"\nDeleting subscription [cyan]{subscription_id}[/cyan]...")
     try:
