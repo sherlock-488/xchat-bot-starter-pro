@@ -174,6 +174,117 @@ def delete(
         raise typer.Exit(code=1)
 
 
+@app.command("validate")
+def validate(
+    webhook_id: str = typer.Argument(..., help="Webhook ID to validate (trigger CRC re-check)"),
+) -> None:
+    """Trigger a CRC re-validation for a registered webhook (PUT /2/webhooks/{id}).
+
+    X will send a new CRC challenge to your webhook URL. Useful for:
+      - Confirming your webhook is still reachable after a deployment
+      - Re-validating after changing your consumer secret
+      - Debugging CRC failures
+    """
+    _load_dotenv()
+    headers = _bearer_headers()
+
+    console.print(f"\nValidating webhook [cyan]{webhook_id}[/cyan] (triggering CRC challenge)...")
+    try:
+        resp = httpx.put(
+            f"{_WEBHOOKS_URL}/{webhook_id}",
+            headers=headers,
+            timeout=30.0,
+        )
+    except httpx.HTTPError as exc:
+        console.print(f"[red]Request failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    if resp.status_code in (200, 204):
+        console.print(f"[green]✓[/green] CRC challenge sent to webhook {webhook_id}.")
+        console.print(
+            "  If your server responded correctly, the webhook is now validated."
+        )
+    elif resp.status_code == 404:
+        console.print(f"[yellow]Not found:[/yellow] Webhook {webhook_id} does not exist.")
+        raise typer.Exit(code=1)
+    else:
+        console.print(f"[red]Error {resp.status_code}:[/red] {resp.text[:300]}")
+        raise typer.Exit(code=1)
+
+
+@app.command("replay")
+def replay(
+    webhook_id: str = typer.Argument(..., help="Webhook ID to replay events for"),
+    from_date: str = typer.Option(
+        ...,
+        "--from",
+        help="Start of replay window, 12-digit UTC: yyyymmddhhmm (e.g. 202604170000)",
+    ),
+    to_date: str = typer.Option(
+        ...,
+        "--to",
+        help="End of replay window, 12-digit UTC: yyyymmddhhmm (e.g. 202604172359)",
+    ),
+) -> None:
+    """Replay webhook events from the last 24 hours (POST /2/webhooks/replay).
+
+    X re-delivers events that were delivered or attempted in the given time window.
+    Useful for recovering events missed during downtime.
+
+    Time format: 12-digit UTC yyyymmddhhmm (NOT ISO 8601).
+    Max window: 24 hours. Rate limit: 100 requests per 15 minutes.
+
+    Example:
+      xchat webhook replay 1234567890 --from 202604170000 --to 202604172359
+    """
+    _load_dotenv()
+    headers = _bearer_headers()
+
+    # Validate format (basic check)
+    for label, value in (("--from", from_date), ("--to", to_date)):
+        if not value.isdigit() or len(value) != 12:
+            console.print(
+                f"[red]Error:[/red] {label} must be 12 digits in yyyymmddhhmm format "
+                f"(e.g. 202604170000), got: {value!r}"
+            )
+            raise typer.Exit(code=1)
+
+    body = {
+        "webhook_id": webhook_id,
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+
+    console.print("\n[bold]xchat webhook replay[/bold]")
+    console.print(f"  Webhook ID : [cyan]{webhook_id}[/cyan]")
+    console.print(f"  From       : [cyan]{from_date}[/cyan]")
+    console.print(f"  To         : [cyan]{to_date}[/cyan]\n")
+
+    try:
+        resp = httpx.post(
+            f"{_WEBHOOKS_URL}/replay",
+            headers=headers,
+            json=body,
+            timeout=30.0,
+        )
+    except httpx.HTTPError as exc:
+        console.print(f"[red]Request failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    if resp.status_code in (200, 201, 202):
+        console.print("[green]✓[/green] Replay requested.")
+        console.print(
+            "  X will re-deliver matching events to your webhook. "
+            "Check your event log for incoming events."
+        )
+    elif resp.status_code == 404:
+        console.print(f"[yellow]Not found:[/yellow] Webhook {webhook_id} does not exist.")
+        raise typer.Exit(code=1)
+    else:
+        console.print(f"[red]Error {resp.status_code}:[/red] {resp.text[:300]}")
+        raise typer.Exit(code=1)
+
+
 def _load_dotenv() -> None:
     env_file = Path(".env")
     if env_file.exists():
