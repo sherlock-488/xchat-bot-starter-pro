@@ -1,0 +1,9 @@
+{
+  "_note": "Real chat.received event captured 2026-04-19. Encrypted payload omitted (private). Metadata only.",
+  "event_type": "chat.received",
+  "schema_source": "observed-xchat",
+  "event_id": "7620444452576785342",
+  "sig_valid": true,
+  "bot_behavior": "echo_skip_no_plaintext — real encrypted payload, crypto_mode=stub",
+  "decrypt_notes": "Real encrypted payload detected. Use crypto_mode=real with a valid state.json to decrypt. Note: real decryption is EXPERIMENTAL (chat-xdk not yet stable)."
+}
