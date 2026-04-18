@@ -74,6 +74,15 @@ def register(
         console.print("[red]Error:[/red] Webhook URL must be HTTPS. X rejects HTTP URLs.")
         raise typer.Exit(code=1)
 
+    from urllib.parse import urlparse
+
+    if urlparse(url).port is not None:
+        console.print(
+            "[red]Error:[/red] Webhook URL cannot include a port number. "
+            "X requires a standard HTTPS URL without a port."
+        )
+        raise typer.Exit(code=1)
+
     console.print("\n[bold]xchat webhook register[/bold]")
     console.print(f"  URL: [cyan]{url}[/cyan]\n")
 
@@ -201,9 +210,7 @@ def validate(
 
     if resp.status_code in (200, 204):
         console.print(f"[green]✓[/green] CRC challenge sent to webhook {webhook_id}.")
-        console.print(
-            "  If your server responded correctly, the webhook is now validated."
-        )
+        console.print("  If your server responded correctly, the webhook is now validated.")
     elif resp.status_code == 404:
         console.print(f"[yellow]Not found:[/yellow] Webhook {webhook_id} does not exist.")
         raise typer.Exit(code=1)

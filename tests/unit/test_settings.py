@@ -10,16 +10,20 @@ from xchat_bot.config.settings import AppSettings
 
 def _clean_settings(**kwargs):  # type: ignore[no-untyped-def]
     """Create AppSettings ignoring any local .env file — for isolated unit tests."""
+
     class _IsolatedSettings(AppSettings):
         model_config = AppSettings.model_config.copy()
         model_config["env_file"] = None  # type: ignore[index]
+
     return _IsolatedSettings(**kwargs)
 
 
 def test_valid_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     for key in (
-        "XCHAT_TRANSPORT_MODE", "XCHAT_CRYPTO_MODE",
-        "XCHAT_CONSUMER_KEY", "XCHAT_CONSUMER_SECRET",
+        "XCHAT_TRANSPORT_MODE",
+        "XCHAT_CRYPTO_MODE",
+        "XCHAT_CONSUMER_KEY",
+        "XCHAT_CONSUMER_SECRET",
     ):
         monkeypatch.delenv(key, raising=False)
     settings = _clean_settings(consumer_key="key123", consumer_secret="secret123")

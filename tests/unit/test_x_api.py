@@ -168,3 +168,65 @@ async def test_send_reply_api_error(settings_with_token: AppSettings) -> None:
 
     assert result.success is False
     assert "403" in (result.error or "")
+
+
+async def test_dm_v2_mode_sends_only_text(settings_with_token: AppSettings) -> None:
+    """Default dm-v2 mode must send only {'text': text} — no experimental fields."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 201
+    mock_resp.is_success = True
+    mock_resp.headers = {}
+    mock_resp.json.return_value = {"data": {"dm_event_id": "evt_1"}}
+
+    with patch("xchat_bot.reply.x_api.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(return_value=mock_resp)
+        mock_client_cls.return_value = mock_client
+
+        adapter = XApiReplyAdapter(settings_with_token)  # default: dm-v2
+        await adapter.send_reply(
+            "conv_001",
+            "hello",
+            reply_to_event_id="evt_prev",
+            conversation_token="tok_123",
+        )
+
+    sent_json = mock_client.post.call_args.kwargs["json"]
+    assert sent_json == {"text": "hello"}, (
+        "dm-v2 mode must only send {'text': ...} — experimental fields must be excluded"
+    )
+    assert "reply_to_dm_event_id" not in sent_json
+    assert "conversation_token" not in sent_json
+
+
+async def test_xchat_observed_mode_includes_experimental_fields(
+    settings_with_token: AppSettings,
+) -> None:
+    """xchat-observed mode must include reply_to_dm_event_id and conversation_token."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 201
+    mock_resp.is_success = True
+    mock_resp.headers = {}
+    mock_resp.json.return_value = {"data": {"dm_event_id": "evt_1"}}
+
+    with patch("xchat_bot.reply.x_api.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.post = AsyncMock(return_value=mock_resp)
+        mock_client_cls.return_value = mock_client
+
+        adapter = XApiReplyAdapter(settings_with_token, reply_mode="xchat-observed")
+        await adapter.send_reply(
+            "conv_001",
+            "hello",
+            reply_to_event_id="evt_prev",
+            conversation_token="tok_123",
+        )
+
+    sent_json = mock_client.post.call_args.kwargs["json"]
+    assert sent_json["text"] == "hello"
+    assert sent_json["reply_to_dm_event_id"] == "evt_prev"
+    assert sent_json["conversation_token"] == "tok_123"

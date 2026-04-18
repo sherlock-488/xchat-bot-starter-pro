@@ -50,7 +50,9 @@ logger = structlog.get_logger(__name__)
 # POST /2/dm_conversations/{conversation_id}/messages  body: {"text": "..."}
 _REPLY_ENDPOINT_TEMPLATE = "https://api.x.com/2/dm_conversations/{conversation_id}/messages"
 # One-to-one DM endpoint (by participant ID) — also documented.
-_DM_WITH_PARTICIPANT_TEMPLATE = "https://api.x.com/2/dm_conversations/with/{participant_id}/messages"
+_DM_WITH_PARTICIPANT_TEMPLATE = (
+    "https://api.x.com/2/dm_conversations/with/{participant_id}/messages"
+)
 _TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
 

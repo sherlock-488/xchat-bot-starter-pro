@@ -82,9 +82,7 @@ def send(
     _load_dotenv()
 
     if not conversation_id and not participant_id:
-        console.print(
-            "[red]Error:[/red] Provide either --conversation-id or --participant-id."
-        )
+        console.print("[red]Error:[/red] Provide either --conversation-id or --participant-id.")
         raise typer.Exit(code=1)
     if conversation_id and participant_id:
         console.print(

@@ -193,3 +193,52 @@ def test_is_chat_property(norm: EventNormalizer) -> None:
         assert norm.normalize(raw).is_chat is True
     raw = {"data": {"event_type": "profile.update.bio", "payload": {}}}
     assert norm.normalize(raw).is_chat is False
+
+
+def test_xaa_event_uuid_used_as_event_id(norm: EventNormalizer) -> None:
+    """When data.event_uuid is present, it must be used as event_id."""
+    raw = {
+        "data": {
+            "event_uuid": "1146654567674912769",
+            "event_type": "profile.update.bio",
+            "filter": {"user_id": "2244994945"},
+            "payload": {"before": "old bio", "after": "new bio"},
+        }
+    }
+    event = norm.normalize(raw)
+
+    assert event.event_uuid == "1146654567674912769"
+    assert event.event_id == "1146654567674912769"
+
+
+def test_xaa_chat_event_uuid_used_as_event_id(norm: EventNormalizer) -> None:
+    """event_uuid in chat.received envelope must override the hash-based event_id."""
+    raw = {
+        "data": {
+            "event_uuid": "9876543210987654321",
+            "event_type": "chat.received",
+            "payload": {
+                "conversation_id": "CONV_001",
+                "encoded_event": "STUB_ENC_SGVsbG8h",
+            },
+        }
+    }
+    event = norm.normalize(raw)
+
+    assert event.event_uuid == "9876543210987654321"
+    assert event.event_id == "9876543210987654321"
+
+
+def test_xaa_no_event_uuid_falls_back_to_hash(norm: EventNormalizer) -> None:
+    """Without event_uuid, event_id must be a stable hash."""
+    raw = {
+        "data": {
+            "event_type": "profile.update.bio",
+            "filter": {"user_id": "123"},
+            "payload": {"before": "a", "after": "b"},
+        }
+    }
+    event = norm.normalize(raw)
+
+    assert event.event_uuid is None
+    assert len(event.event_id) == 32  # sha256 hex prefix

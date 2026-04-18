@@ -242,7 +242,8 @@ def _print_scenario(scenario: str) -> None:
             "title": "Public smoke test (profile.update.bio)",
             "description": (
                 "Verify you can subscribe to profile.update.bio — a public event "
-                "that requires no OAuth scopes for the monitored user."
+                "that requires no OAuth consent from the monitored user. "
+                "Requires approved app + App Bearer Token."
             ),
             "checklist": [
                 ("XCHAT_BEARER_TOKEN set", bool(os.getenv("XCHAT_BEARER_TOKEN"))),
@@ -295,9 +296,10 @@ def _print_scenario(scenario: str) -> None:
                 ),
                 (
                     "Webhook URL has no port",
-                    ":" not in (os.getenv("XCHAT_WEBHOOK_PUBLIC_URL") or "").replace(
-                        "https://", ""
-                    ).replace("http://", ""),
+                    ":"
+                    not in (os.getenv("XCHAT_WEBHOOK_PUBLIC_URL") or "")
+                    .replace("https://", "")
+                    .replace("http://", ""),
                 ),
                 (
                     "Webhook URL is not localhost",
@@ -323,8 +325,7 @@ def _print_scenario(scenario: str) -> None:
 
     console.print(
         Panel(
-            f"[bold]{info['title']}[/bold]\n\n"
-            f"{info['description']}\n",
+            f"[bold]{info['title']}[/bold]\n\n{info['description']}\n",
             title=f"Scenario: {scenario}",
             border_style="cyan",
         )
@@ -388,7 +389,8 @@ def doctor(
     Use --scenario for targeted readiness checks:
 
       xchat doctor --scenario public-smoke
-          Verify you can subscribe to profile.update.bio (no OAuth needed).
+          Verify you can subscribe to profile.update.bio
+          (no monitored-user OAuth consent; app Bearer Token required).
 
       xchat doctor --scenario chat-bot
           Verify you have OAuth user token + dm.read/dm.write scopes for XChat.

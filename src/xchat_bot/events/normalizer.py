@@ -116,12 +116,14 @@ class EventNormalizer:
         event_id = (
             str(event_uuid)
             if event_uuid
-            else _stable_event_id([
-                event_type,
-                json.dumps(filter_, sort_keys=True, ensure_ascii=False),
-                json.dumps(payload, sort_keys=True, ensure_ascii=False),
-                str(tag or ""),
-            ])
+            else _stable_event_id(
+                [
+                    event_type,
+                    json.dumps(filter_, sort_keys=True, ensure_ascii=False),
+                    json.dumps(payload, sort_keys=True, ensure_ascii=False),
+                    str(tag or ""),
+                ]
+            )
         )
         return NormalizedEvent(
             event_id=event_id,

@@ -14,7 +14,7 @@ Auth model:
   - --auth auto (default): picks the right token automatically based on event_type
 
 Typical flow:
-  # Public smoke test (no OAuth needed)
+  # Public smoke test (no monitored-user OAuth consent; app Bearer Token required)
   xchat subscriptions create --event-type profile.update.bio --user-id <id> --tag "smoke"
 
   # Private XChat events (requires xchat auth login first)
@@ -130,7 +130,7 @@ def create(
     direction: str | None = typer.Option(
         None,
         "--direction",
-        help="Direction filter (e.g. 'incoming' or 'outgoing')",
+        help="Raw direction filter value for event types that document it, e.g. 'inbound'.",
     ),
     tag: str | None = typer.Option(
         None,
@@ -161,7 +161,7 @@ def create(
       - Private events (chat.*, dm.*): OAuth 2.0 user token (xchat auth login)
 
     Examples:
-      # Public smoke test — no OAuth needed
+      # Public smoke test — no monitored-user OAuth consent required; app Bearer Token required
       xchat subscriptions create --event-type profile.update.bio --user-id 2244994945 --tag "smoke"
 
       # Private XChat events — requires xchat auth login first

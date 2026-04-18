@@ -66,7 +66,7 @@ cp .env.example .env
 #   XCHAT_BEARER_TOKEN=...      (App Bearer Token — for Activity Stream)
 ```
 
-### Track A: Public smoke test (no OAuth needed)
+### Track A: Public smoke test (no monitored-user OAuth consent required)
 
 Validate your XAA pipeline using `profile.update.bio` — a public event that
 requires no special OAuth scopes for the monitored user.
@@ -303,7 +303,7 @@ See [docs/known-caveats.md](docs/known-caveats.md) for the full list of EXPERIME
 
 Short version:
 - E2EE decryption is a placeholder (chat-xdk not yet stable)
-- Reply API endpoint is observed, not yet fully documented
+- DM v2 send endpoint is documented (default); XChat reply extras (`conversation_token`) are experimental
 - `conversation_token` field is EXPERIMENTAL
 - Activity Stream endpoint: GET /2/activity/stream (endpoint documented; reconnect params observed)
 
