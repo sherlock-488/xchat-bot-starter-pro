@@ -73,6 +73,8 @@ class EventNormalizer:
         payload = data.get("payload") or {}
         filter_ = data.get("filter") or {}
         tag = data.get("tag")
+        # event_uuid is the platform-assigned stable ID (present in real XAA events)
+        event_uuid = data.get("event_uuid") or data.get("event_id")
         schema_source = "observed-xchat" if event_type.startswith("chat.") else "docs-xaa"
 
         # chat.* events: extract encrypted XChat fields
@@ -87,10 +89,16 @@ class EventNormalizer:
                 encrypted_conversation_key=enc_key,
                 conversation_key_version=key_ver,
             )
-            event_id = _stable_event_id([conv_id or "", (encoded or "")[:32], event_type])
+            # Prefer platform event_uuid; fall back to deterministic hash
+            event_id = (
+                str(event_uuid)
+                if event_uuid
+                else _stable_event_id([conv_id or "", (encoded or "")[:32], event_type])
+            )
             is_stub = bool(encoded and encoded.startswith("STUB_"))
             return NormalizedEvent(
                 event_id=event_id,
+                event_uuid=str(event_uuid) if event_uuid else None,
                 event_type=event_type,
                 schema_source=schema_source,
                 received_at=_now_utc(),
@@ -105,14 +113,19 @@ class EventNormalizer:
             )
 
         # Non-chat XAA events (profile.update.bio, follow.*, spaces.*, etc.)
-        event_id = _stable_event_id([
-            event_type,
-            json.dumps(filter_, sort_keys=True, ensure_ascii=False),
-            json.dumps(payload, sort_keys=True, ensure_ascii=False),
-            str(tag or ""),
-        ])
+        event_id = (
+            str(event_uuid)
+            if event_uuid
+            else _stable_event_id([
+                event_type,
+                json.dumps(filter_, sort_keys=True, ensure_ascii=False),
+                json.dumps(payload, sort_keys=True, ensure_ascii=False),
+                str(tag or ""),
+            ])
+        )
         return NormalizedEvent(
             event_id=event_id,
+            event_uuid=str(event_uuid) if event_uuid else None,
             event_type=event_type,
             schema_source=schema_source,
             received_at=_now_utc(),

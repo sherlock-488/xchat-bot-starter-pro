@@ -29,6 +29,8 @@ Features:
 
 from __future__ import annotations
 
+from typing import Literal
+
 import httpx
 import structlog
 from tenacity import (
@@ -59,18 +61,25 @@ class XApiReplyAdapter:
     send messages on behalf of the bot account. On 401, attempts to refresh
     the access token using the stored refresh_token before giving up.
 
-    Default mode uses the documented DM Manage v2 endpoint:
-      POST /2/dm_conversations/{conversation_id}/messages
-
-    The ``conversation_token`` parameter is EXPERIMENTAL (observed from
-    xchat-bot-python, not yet in official docs) and is omitted by default.
+    reply_mode controls the request body:
+      "dm-v2" (default): documented DM Manage v2 — body is {"text": "..."}
+          POST /2/dm_conversations/{conversation_id}/messages
+      "xchat-observed": adds observed XChat extras (reply_to_dm_event_id,
+          conversation_token) — use only when you know the XChat reply path
+          is available and you have a valid conversation_token.
 
     Args:
         settings: Application settings (provides user_access_token and retry config).
+        reply_mode: "dm-v2" (default) or "xchat-observed".
     """
 
-    def __init__(self, settings: AppSettings) -> None:
+    def __init__(
+        self,
+        settings: AppSettings,
+        reply_mode: Literal["dm-v2", "xchat-observed"] = "dm-v2",
+    ) -> None:
         self._settings = settings
+        self._reply_mode = reply_mode
         # In-memory cache of the current access token (may be refreshed at runtime)
         self._current_token: str | None = (
             settings.user_access_token.get_secret_value() if settings.user_access_token else None
@@ -86,13 +95,17 @@ class XApiReplyAdapter:
     ) -> ReplyResult:
         """Send a DM reply using the OAuth 2.0 user access token.
 
-        EXPERIMENTAL: The request format follows xchat-bot-python observations.
+        In "dm-v2" mode (default), sends {"text": text} — the documented
+        DM Manage v2 body. reply_to_event_id and conversation_token are ignored.
+
+        In "xchat-observed" mode, also includes reply_to_dm_event_id and
+        conversation_token when provided (EXPERIMENTAL fields from xchat-bot-python).
 
         Args:
             conversation_id: DM conversation ID.
             text: Message text (plaintext, will be encrypted by X).
-            reply_to_event_id: Event ID to reply to (optional).
-            conversation_token: EXPERIMENTAL: opaque conversation token.
+            reply_to_event_id: Event ID to reply to. Only used in xchat-observed mode.
+            conversation_token: EXPERIMENTAL opaque token. Only used in xchat-observed mode.
 
         Returns:
             ReplyResult with success status and any error details.
@@ -100,7 +113,7 @@ class XApiReplyAdapter:
         log = logger.bind(
             conversation_id=conversation_id,
             text_length=len(text),
-            reply_to_event_id=reply_to_event_id,
+            reply_mode=self._reply_mode,
         )
 
         if not self._current_token:
@@ -115,14 +128,14 @@ class XApiReplyAdapter:
 
         url = _REPLY_ENDPOINT_TEMPLATE.format(conversation_id=conversation_id)
 
-        # Documented DM Manage v2 body format
+        # dm-v2 (default): documented DM Manage v2 body — only {"text": "..."}
         body: dict[str, object] = {"text": text}
-        if reply_to_event_id:
-            body["reply_to_dm_event_id"] = reply_to_event_id
-        # conversation_token: EXPERIMENTAL — observed from xchat-bot-python,
-        # not yet in official DM Manage docs. Only included when explicitly passed.
-        if conversation_token:
-            body["conversation_token"] = conversation_token
+        if self._reply_mode == "xchat-observed":
+            # xchat-observed: add experimental XChat fields when provided
+            if reply_to_event_id:
+                body["reply_to_dm_event_id"] = reply_to_event_id
+            if conversation_token:
+                body["conversation_token"] = conversation_token  # EXPERIMENTAL
 
         headers = {
             "Authorization": f"Bearer {self._current_token}",

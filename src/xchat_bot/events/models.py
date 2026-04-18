@@ -120,8 +120,16 @@ class NormalizedEvent(BaseModel):
     event_id: str = Field(
         description=(
             "Stable, deterministic event identifier used for deduplication. "
-            "Derived from payload fields — same event always produces the same ID."
+            "Set to event_uuid from the XAA envelope when present; "
+            "otherwise derived from payload fields."
         )
+    )
+    event_uuid: str | None = Field(
+        None,
+        description=(
+            "Platform-assigned event UUID from data.event_uuid in the XAA envelope. "
+            "Present in real X Activity events; None for demo/unknown schema."
+        ),
     )
     event_type: str = Field(
         description="Event type string, e.g. 'chat.received', 'chat.sent', 'chat.conversation_join'"

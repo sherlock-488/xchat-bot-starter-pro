@@ -23,7 +23,7 @@ This starter kit follows current official examples and documentation. Some XChat
 | App Bearer Token (stream) | ✅ Documented, stable |
 | DM v2 send (`POST /2/dm_conversations/…/messages`) | ✅ Documented, stable |
 | Activity Stream transport | ⚠️ Endpoint documented; reconnect params observed |
-| XChat reply (`conversation_token`) | ⚠️ EXPERIMENTAL — observed, not yet documented |
+| XChat reply extras (`conversation_token`, `reply_to_dm_event_id`) | ⚠️ EXPERIMENTAL — use `reply_mode="xchat-observed"` |
 | E2EE decryption | ⚠️ EXPERIMENTAL — chat-xdk not yet officially released |
 | `chat.*` event payload shape | ⚠️ `observed-xchat` — inferred from xchat-bot-python |
 
@@ -145,7 +145,7 @@ xchat run --transport webhook
 │              BotBase.handle(NormalizedEvent)                 │
 │                         │                                    │
 │              ReplyAdapter.send_reply()                       │
-│              (XApiReplyAdapter — EXPERIMENTAL)               │
+│              (XApiReplyAdapter — dm-v2 documented default)   │
 └─────────────────────────────────────────────────────────────┘
 ```
 

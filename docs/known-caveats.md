@@ -20,17 +20,28 @@ based on observed behavior rather than fully documented official APIs.
 
 ---
 
-## Reply API Endpoint (EXPERIMENTAL)
+## DM Reply — Documented vs Experimental
 
-**Field:** `XApiReplyAdapter._REPLY_ENDPOINT_TEMPLATE`
+**Status:** Split into two modes as of 2026-04-18.
 
-**Observation:** The DM reply endpoint pattern follows xchat-bot-python observations.
-The exact path, required headers, and request body format are not yet fully documented.
+### Documented: DM Manage v2 (default)
 
-**Risk:** This endpoint may change when officially documented.
+`XApiReplyAdapter` defaults to `reply_mode="dm-v2"`:
+- Endpoint: `POST /2/dm_conversations/{conversation_id}/messages`
+- Body: `{"text": "..."}` — documented in X DM Manage API
+- This path is **stable and documented**.
 
-**Mitigation:** All X API calls are wrapped in `XApiReplyAdapter`. If the endpoint changes,
-update only `x_api.py` — bot logic is unaffected.
+### Experimental: XChat reply extras (`reply_mode="xchat-observed"`)
+
+When `reply_mode="xchat-observed"`, the adapter also sends:
+- `reply_to_dm_event_id` — observed from xchat-bot-python
+- `conversation_token` — observed from xchat-bot-python
+
+**Risk:** These fields are not yet in official DM Manage docs and may change.
+
+**Mitigation:** Default mode is `dm-v2`. Switch to `xchat-observed` only when
+you have confirmed the XChat reply path is available and you have a valid
+`conversation_token` from the event payload.
 
 ---
 
@@ -39,12 +50,12 @@ update only `x_api.py` — bot logic is unaffected.
 **Field:** `NormalizedEvent.conversation_token`
 
 **Observation:** Observed in xchat-bot-python as `data.payload.conversation_token`.
-Appears to be required for sending replies in some contexts.
+May be required for XChat encrypted reply path.
 
 **Risk:** Field may be renamed, removed, or have different semantics when officially documented.
 
-**Mitigation:** Field is labeled `description="EXPERIMENTAL"` in the Pydantic model.
-Reply adapter accepts it as an optional parameter.
+**Mitigation:** Field is preserved in `NormalizedEvent` but only forwarded to the
+reply API when `reply_mode="xchat-observed"` is explicitly set.
 
 ---
 
