@@ -247,7 +247,6 @@ def _print_scenario(scenario: str) -> None:
             ),
             "checklist": [
                 ("XCHAT_BEARER_TOKEN set", bool(os.getenv("XCHAT_BEARER_TOKEN"))),
-                ("XCHAT_OAUTH_CLIENT_ID set", bool(os.getenv("XCHAT_OAUTH_CLIENT_ID"))),
                 (".env file exists", Path(".env").exists()),
             ],
             "next_steps": (

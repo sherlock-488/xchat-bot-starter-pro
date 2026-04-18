@@ -175,9 +175,9 @@ class NormalizedEvent(BaseModel):
     conversation_token: str | None = Field(
         None,
         description=(
-            "EXPERIMENTAL: Opaque token required by the reply API. "
-            "Observed in xchat-bot-python as data.payload.conversation_token. "
-            "Required for sending replies — may change when official docs publish."
+            "EXPERIMENTAL: Opaque token observed in xchat-bot-python "
+            "as data.payload.conversation_token. "
+            "Only used in xchat-observed reply mode; ignored by default dm-v2 replies."
         ),
     )
 

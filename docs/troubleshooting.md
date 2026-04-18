@@ -109,7 +109,7 @@ xchat replay run recordings/session.jsonl --target http://localhost:8080/webhook
 
 **Inspect a fixture file:**
 ```bash
-xchat inspect tests/fixtures/chat_received_official.json --decrypt
+xchat inspect tests/fixtures/chat_received_observed_xchat.json --decrypt
 ```
 
 **Compare two bot versions:**
@@ -149,7 +149,7 @@ xchat replay diff tests/fixtures/batch_events.jsonl \
 
 **Test your CRC locally:**
 ```bash
-xchat inspect tests/fixtures/chat_received_official.json
+xchat inspect tests/fixtures/chat_received_observed_xchat.json
 # The inspect command shows what CRC would produce
 ```
 

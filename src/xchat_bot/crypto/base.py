@@ -30,7 +30,7 @@ class CryptoAdapter(Protocol):
         """Decrypt an encoded event payload.
 
         Args:
-            encoded_event: The encoded_event field from the official XAA payload,
+            encoded_event: The encoded_event field from the observed XChat XAA payload,
                            or encrypted_content from the demo schema.
             encrypted_conversation_key: The encrypted_conversation_key from the
                                         official XAA payload, if available.
