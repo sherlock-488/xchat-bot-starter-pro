@@ -140,7 +140,7 @@ async def run_oauth_flow(
 
     # Generate PKCE pair and state nonce (CSRF protection)
     code_verifier, code_challenge = _pkce_pair()
-    state = secrets.token_urlsafe(16)
+    expected_state = secrets.token_urlsafe(16)
 
     # Build authorization URL
     auth_params = {
@@ -148,7 +148,7 @@ async def run_oauth_flow(
         "client_id": client_id,
         "redirect_uri": redirect_uri,
         "scope": scopes,
-        "state": state,
+        "state": expected_state,
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
     }
@@ -158,24 +158,24 @@ async def run_oauth_flow(
     code_future: asyncio.Future[str] = asyncio.get_event_loop().create_future()
 
     import uvicorn
-    from fastapi import FastAPI, Request
+    from fastapi import FastAPI, Query
     from fastapi.responses import HTMLResponse
 
     callback_app = FastAPI()
 
     @callback_app.get(callback_path)
-    async def callback(request: Request) -> HTMLResponse:  # type: ignore[misc]
-        params = dict(request.query_params)
-        error = params.get("error")
-        returned_state = params.get("state", "")
-        code = params.get("code", "")
+    async def callback(  # type: ignore[misc]
+        code: str = Query(default=""),
+        state: str = Query(default=""),
+        error: str = Query(default=""),
+    ) -> HTMLResponse:
 
         if not code_future.done():
             if error:
                 code_future.set_exception(ValueError(f"Authorization denied: {error}"))
-            elif returned_state != state:
+            elif state != expected_state:
                 code_future.set_exception(ValueError("State mismatch — possible CSRF attack"))
-            else:
+            elif code:
                 code_future.set_result(code)
 
         if error:
