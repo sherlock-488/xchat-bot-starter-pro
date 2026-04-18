@@ -1,0 +1,13 @@
+{
+  "data": {
+    "filter": {
+      "user_id": "2244994945"
+    },
+    "event_type": "profile.update.bio",
+    "tag": "starter smoke test",
+    "payload": {
+      "before": "Mars & Cars",
+      "after": "Mars, Cars & AI"
+    }
+  }
+}

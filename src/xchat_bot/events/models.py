@@ -172,6 +172,26 @@ class NormalizedEvent(BaseModel):
         ),
     )
 
+    # ── XAA envelope metadata (preserved for debugging) ──────────────────
+    filter: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "XAA envelope filter dict (e.g. {'user_id': '...'} for profile events). "
+            "Preserved from the data.filter field in the XAA envelope."
+        ),
+    )
+    tag: str | None = Field(
+        None,
+        description="Subscription tag from data.tag in the XAA envelope, if present.",
+    )
+    payload: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Generic inner payload dict. For chat.* events this is the encrypted payload. "
+            "For profile.update.bio this contains before/after. Always set for XAA events."
+        ),
+    )
+
     # ── Processing metadata ───────────────────────────────────────────────
     is_stub: bool = Field(
         False,
@@ -202,6 +222,22 @@ class NormalizedEvent(BaseModel):
     def is_join(self) -> bool:
         """True if this is a conversation join event."""
         return self.event_type == "chat.conversation_join"
+
+    @property
+    def is_chat(self) -> bool:
+        """True if this is any chat.* event."""
+        return self.event_type.startswith("chat.")
+
+    @property
+    def is_profile_update(self) -> bool:
+        """True if this is a profile.update.* event."""
+        return self.event_type.startswith("profile.update.")
+
+    @property
+    def filter_user_id(self) -> str | None:
+        """Convenience accessor for filter.user_id (common in XAA subscriptions)."""
+        value = self.filter.get("user_id")
+        return str(value) if value is not None else None
 
     def now_utc() -> datetime:  # type: ignore[misc]
         return datetime.now(UTC)

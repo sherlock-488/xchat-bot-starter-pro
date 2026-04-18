@@ -65,44 +65,60 @@ class EventNormalizer:
         """Handle XAA envelope: {"data": {"event_type": "...", "payload": {...}}}
 
         schema_source:
-          - "docs-xaa" for profile.update.* and other events with official docs.x.com examples
+          - "docs-xaa" for profile.update.* and other events with docs.x.com examples
           - "observed-xchat" for chat.* events (inferred from xchat-bot-python)
         """
         data = raw["data"]
-        event_type = data.get("event_type", "unknown")
+        event_type = str(data.get("event_type") or "unknown")
         payload = data.get("payload") or {}
+        filter_ = data.get("filter") or {}
+        tag = data.get("tag")
+        schema_source = "observed-xchat" if event_type.startswith("chat.") else "docs-xaa"
 
-        conv_id = payload.get("conversation_id")
-        encoded = payload.get("encoded_event")
-        enc_key = payload.get("encrypted_conversation_key")
-        key_ver = payload.get("conversation_key_version")
-        conv_token = payload.get("conversation_token")  # EXPERIMENTAL
+        # chat.* events: extract encrypted XChat fields
+        if event_type.startswith("chat."):
+            conv_id = payload.get("conversation_id")
+            encoded = payload.get("encoded_event")
+            enc_key = payload.get("encrypted_conversation_key")
+            key_ver = payload.get("conversation_key_version")
+            conv_token = payload.get("conversation_token")  # EXPERIMENTAL
+            encrypted = EncryptedPayload(
+                encoded_event=encoded,
+                encrypted_conversation_key=enc_key,
+                conversation_key_version=key_ver,
+            )
+            event_id = _stable_event_id([conv_id or "", (encoded or "")[:32], event_type])
+            is_stub = bool(encoded and encoded.startswith("STUB_"))
+            return NormalizedEvent(
+                event_id=event_id,
+                event_type=event_type,
+                schema_source=schema_source,
+                received_at=_now_utc(),
+                filter=filter_,
+                tag=tag,
+                payload=payload,
+                conversation_id=conv_id,
+                encrypted=encrypted,
+                conversation_token=conv_token,
+                is_stub=is_stub,
+                raw=raw,
+            )
 
-        encrypted = EncryptedPayload(
-            encoded_event=encoded,
-            encrypted_conversation_key=enc_key,
-            conversation_key_version=key_ver,
-        )
-
-        event_id = _stable_event_id(
-            [
-                conv_id or "",
-                (encoded or "")[:32],
-                event_type,
-            ]
-        )
-
-        is_stub = bool(encoded and encoded.startswith("STUB_"))
-
+        # Non-chat XAA events (profile.update.bio, follow.*, spaces.*, etc.)
+        event_id = _stable_event_id([
+            event_type,
+            json.dumps(filter_, sort_keys=True, ensure_ascii=False),
+            json.dumps(payload, sort_keys=True, ensure_ascii=False),
+            str(tag or ""),
+        ])
         return NormalizedEvent(
             event_id=event_id,
             event_type=event_type,
-            schema_source="observed-xchat" if event_type.startswith("chat.") else "docs-xaa",
+            schema_source=schema_source,
             received_at=_now_utc(),
-            conversation_id=conv_id,
-            encrypted=encrypted,
-            conversation_token=conv_token,
-            is_stub=is_stub,
+            filter=filter_,
+            tag=tag,
+            payload=payload,
             raw=raw,
         )
 

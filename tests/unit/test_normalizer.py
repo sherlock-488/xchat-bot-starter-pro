@@ -139,3 +139,57 @@ def test_is_outgoing_property(norm: EventNormalizer) -> None:
     event = norm.normalize(raw)
     assert event.is_outgoing is True
     assert event.is_incoming is False
+
+
+def test_profile_update_bio_docs_xaa(norm: EventNormalizer) -> None:
+    """profile.update.bio uses docs-xaa schema and preserves filter/tag/payload."""
+    raw = {
+        "data": {
+            "filter": {"user_id": "2244994945"},
+            "event_type": "profile.update.bio",
+            "tag": "starter smoke test",
+            "payload": {"before": "Mars & Cars", "after": "Mars, Cars & AI"},
+        }
+    }
+    event = norm.normalize(raw)
+
+    assert event.schema_source == "docs-xaa"
+    assert event.event_type == "profile.update.bio"
+    assert event.filter == {"user_id": "2244994945"}
+    assert event.filter_user_id == "2244994945"
+    assert event.tag == "starter smoke test"
+    assert event.payload == {"before": "Mars & Cars", "after": "Mars, Cars & AI"}
+    assert event.is_profile_update is True
+    assert event.is_chat is False
+    assert event.event_id  # deterministic
+
+
+def test_chat_received_preserves_filter_and_tag(norm: EventNormalizer) -> None:
+    """chat.received XAA envelope preserves filter and tag fields."""
+    raw = {
+        "data": {
+            "filter": {"user_id": "bot123"},
+            "event_type": "chat.received",
+            "tag": "my-bot-subscription",
+            "payload": {
+                "conversation_id": "CONV_001",
+                "encoded_event": "STUB_ENC_SGVsbG8h",
+            },
+        }
+    }
+    event = norm.normalize(raw)
+
+    assert event.schema_source == "observed-xchat"
+    assert event.filter == {"user_id": "bot123"}
+    assert event.filter_user_id == "bot123"
+    assert event.tag == "my-bot-subscription"
+    assert event.is_chat is True
+    assert event.is_profile_update is False
+
+
+def test_is_chat_property(norm: EventNormalizer) -> None:
+    for et in ("chat.received", "chat.sent", "chat.conversation_join"):
+        raw = {"data": {"event_type": et, "payload": {}}}
+        assert norm.normalize(raw).is_chat is True
+    raw = {"data": {"event_type": "profile.update.bio", "payload": {}}}
+    assert norm.normalize(raw).is_chat is False
