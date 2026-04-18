@@ -2,7 +2,7 @@
 EventNormalizer — converts raw XChat payloads to NormalizedEvent.
 
 Handles two observed schema formats:
-  1. Official XAA envelope: {"data": {"event_type": "...", "payload": {...}}}
+  1. XAA envelope: {"data": {"event_type": "...", "payload": {...}}}
   2. Demo/flat schema:      {"event_type": "...", "direct_message_events": [...]}
 
 The normalizer never raises on unexpected shapes — it returns a NormalizedEvent
@@ -53,16 +53,21 @@ class EventNormalizer:
         Never raises — returns schema_source="unknown" on unexpected input.
         """
         if "data" in raw and isinstance(raw.get("data"), dict):
-            return self._normalize_official_xaa(raw)
+            return self._normalize_xaa(raw)
         elif "event_type" in raw:
             return self._normalize_demo(raw)
         else:
             return self._normalize_unknown(raw)
 
-    # ── Official XAA envelope ─────────────────────────────────────────────
+    # ── XAA envelope (docs-xaa for profile.*, observed-xchat for chat.*) ────
 
-    def _normalize_official_xaa(self, raw: dict[str, Any]) -> NormalizedEvent:
-        """Handle: {"data": {"event_type": "...", "payload": {...}}}"""
+    def _normalize_xaa(self, raw: dict[str, Any]) -> NormalizedEvent:
+        """Handle XAA envelope: {"data": {"event_type": "...", "payload": {...}}}
+
+        schema_source:
+          - "docs-xaa" for profile.update.* and other events with official docs.x.com examples
+          - "observed-xchat" for chat.* events (inferred from xchat-bot-python)
+        """
         data = raw["data"]
         event_type = data.get("event_type", "unknown")
         payload = data.get("payload") or {}
@@ -92,7 +97,7 @@ class EventNormalizer:
         return NormalizedEvent(
             event_id=event_id,
             event_type=event_type,
-            schema_source="official-xaa",
+            schema_source="observed-xchat" if event_type.startswith("chat.") else "docs-xaa",
             received_at=_now_utc(),
             conversation_id=conv_id,
             encrypted=encrypted,

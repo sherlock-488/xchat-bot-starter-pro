@@ -5,7 +5,8 @@ Both transport modes (stream and webhook) produce NormalizedEvent objects.
 Bot logic only ever sees NormalizedEvent; it never touches raw payloads.
 
 Schema sources:
-  - "official-xaa": XAA envelope format from xchat-bot-python
+  - "observed-xchat": XAA envelope observed from xchat-bot-python (chat.* events)
+  - "docs-xaa": XAA envelope from official docs.x.com examples (profile.update.bio etc.)
       {"data": {"event_type": "...", "payload": {...}}}
   - "demo": Flat demo format used in xchat-playground fixtures
       {"event_type": "...", "direct_message_events": [...]}
@@ -27,16 +28,16 @@ from pydantic import BaseModel, Field
 class EncryptedPayload(BaseModel):
     """Encrypted message material — populated before decryption.
 
-    Fields from the official XAA envelope (data.payload.*) are the primary
-    source. Fields from the demo schema are labeled EXPERIMENTAL.
+    Fields from the observed XAA envelope (data.payload.*) are the primary
+    source (inferred from xchat-bot-python; not yet fully in docs.x.com). Fields from the demo schema are labeled EXPERIMENTAL.
     """
 
-    # Official XAA envelope fields (observed from xchat-bot-python)
+    # Observed XAA envelope fields (inferred from xchat-bot-python)
     encoded_event: str | None = Field(
         None,
         description=(
             "Base64-encoded encrypted message blob. "
-            "From data.payload.encoded_event in the official XAA envelope. "
+            "From data.payload.encoded_event in the observed XAA envelope (xchat-bot-python). "
             "Decrypted with XChaCha20-Poly1305 using the conversation key."
         ),
     )
@@ -124,7 +125,7 @@ class NormalizedEvent(BaseModel):
     event_type: str = Field(
         description="Event type string, e.g. 'chat.received', 'chat.sent', 'chat.conversation_join'"
     )
-    schema_source: Literal["official-xaa", "demo", "unknown"] = Field(
+    schema_source: Literal["docs-xaa", "observed-xchat", "demo", "unknown"] = Field(
         description="Which schema format was detected in the raw payload"
     )
 

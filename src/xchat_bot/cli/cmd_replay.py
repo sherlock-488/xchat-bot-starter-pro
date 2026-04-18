@@ -29,7 +29,7 @@ def replay_run(
     Useful for testing your bot against known event shapes.
 
     Examples:
-        xchat replay run tests/fixtures/chat_received_official.json
+        xchat replay run tests/fixtures/chat_received_observed_xchat.json
         xchat replay run tests/fixtures/batch.jsonl --sign --target http://localhost:8080/webhook
     """
     from xchat_bot.webhook.signature import generate_signature

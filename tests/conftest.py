@@ -69,7 +69,7 @@ def mock_reply() -> AsyncMock:
 
 @pytest.fixture
 def official_event_raw() -> dict[str, Any]:
-    return json.loads((FIXTURES_DIR / "chat_received_official.json").read_text())
+    return json.loads((FIXTURES_DIR / "chat_received_observed_xchat.json").read_text())
 
 
 @pytest.fixture

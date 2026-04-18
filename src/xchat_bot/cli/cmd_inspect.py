@@ -26,7 +26,7 @@ def inspect(
     Useful for understanding payload shapes and testing your normalizer.
 
     Examples:
-        xchat inspect tests/fixtures/chat_received_official.json
+        xchat inspect tests/fixtures/chat_received_observed_xchat.json
         xchat inspect tests/fixtures/batch.jsonl --decrypt
     """
     from xchat_bot.crypto.real import RealCrypto

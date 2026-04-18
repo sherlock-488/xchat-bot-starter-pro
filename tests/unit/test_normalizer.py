@@ -12,7 +12,7 @@ def norm() -> EventNormalizer:
     return EventNormalizer()
 
 
-def test_official_xaa_schema(norm: EventNormalizer) -> None:
+def test_observed_xchat_schema(norm: EventNormalizer) -> None:
     raw = {
         "data": {
             "event_type": "chat.received",
@@ -27,7 +27,7 @@ def test_official_xaa_schema(norm: EventNormalizer) -> None:
     }
     event = norm.normalize(raw)
 
-    assert event.schema_source == "official-xaa"
+    assert event.schema_source == "observed-xchat"
     assert event.event_type == "chat.received"
     assert event.conversation_id == "CONV_001"
     assert event.encrypted is not None

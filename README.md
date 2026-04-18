@@ -21,10 +21,11 @@ This starter kit follows current official examples and documentation. Some XChat
 | CRC challenge + webhook signature | ✅ Documented, stable |
 | OAuth 2.0 user token (reply) | ✅ Documented, stable |
 | App Bearer Token (stream) | ✅ Documented, stable |
+| DM v2 send (`POST /2/dm_conversations/…/messages`) | ✅ Documented, stable |
 | Activity Stream transport | ⚠️ Endpoint documented; reconnect params observed |
-| Reply API | ⚠️ Endpoint/format observed, not yet fully documented |
+| XChat reply (`conversation_token`) | ⚠️ EXPERIMENTAL — observed, not yet documented |
 | E2EE decryption | ⚠️ EXPERIMENTAL — chat-xdk not yet officially released |
-| `conversation_token` field | ⚠️ EXPERIMENTAL — observed, not yet documented |
+| `chat.*` event payload shape | ⚠️ `observed-xchat` — inferred from xchat-bot-python |
 
 Fields and behaviors marked **EXPERIMENTAL** may change when official documentation is published. See [docs/known-caveats.md](docs/known-caveats.md) for the full list.
 
@@ -104,7 +105,7 @@ xchat run
 │          └──────────────┬──────────────┘                    │
 │                         │                                    │
 │              EventNormalizer.normalize()                     │
-│              (official-xaa or demo schema)                   │
+│              (docs-xaa / observed-xchat / demo schema)                   │
 │                         │                                    │
 │              EventDeduplicator.check_and_mark()              │
 │                         │                                    │
