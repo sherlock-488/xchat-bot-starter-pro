@@ -233,6 +233,127 @@ def _run_checks(check_connectivity: bool = False) -> list[dict[str, object]]:
     return results
 
 
+def _print_scenario(scenario: str) -> None:
+    """Print a targeted readiness checklist for a specific use case."""
+    from rich.panel import Panel
+
+    _SCENARIOS: dict[str, dict[str, object]] = {
+        "public-smoke": {
+            "title": "Public smoke test (profile.update.bio)",
+            "description": (
+                "Verify you can subscribe to profile.update.bio — a public event "
+                "that requires no OAuth scopes for the monitored user."
+            ),
+            "checklist": [
+                ("XCHAT_BEARER_TOKEN set", bool(os.getenv("XCHAT_BEARER_TOKEN"))),
+                ("XCHAT_OAUTH_CLIENT_ID set", bool(os.getenv("XCHAT_OAUTH_CLIENT_ID"))),
+                (".env file exists", Path(".env").exists()),
+            ],
+            "next_steps": (
+                "xchat subscriptions create "
+                "--event-type profile.update.bio "
+                "--user-id <test_user_id> "
+                "--tag 'smoke test' "
+                "--auth app\n"
+                "xchat run --transport stream --crypto stub"
+            ),
+        },
+        "chat-bot": {
+            "title": "XChat private event bot (chat.received)",
+            "description": (
+                "Verify you have OAuth user token + dm.read/dm.write scopes "
+                "for receiving and replying to XChat messages."
+            ),
+            "checklist": [
+                ("XCHAT_BEARER_TOKEN set", bool(os.getenv("XCHAT_BEARER_TOKEN"))),
+                ("XCHAT_OAUTH_CLIENT_ID set", bool(os.getenv("XCHAT_OAUTH_CLIENT_ID"))),
+                ("XCHAT_USER_ACCESS_TOKEN set", bool(os.getenv("XCHAT_USER_ACCESS_TOKEN"))),
+                (".env file exists", Path(".env").exists()),
+            ],
+            "next_steps": (
+                "xchat auth login\n"
+                "xchat subscriptions create "
+                "--event-type chat.received "
+                "--user-id <bot_user_id> "
+                "--auth user\n"
+                "xchat run --transport stream --crypto stub"
+            ),
+        },
+        "webhook-prod": {
+            "title": "Production webhook deployment",
+            "description": (
+                "Verify your webhook URL is public HTTPS, no port, not localhost, "
+                "and your consumer secret is configured."
+            ),
+            "checklist": [
+                ("XCHAT_CONSUMER_KEY set", bool(os.getenv("XCHAT_CONSUMER_KEY"))),
+                ("XCHAT_CONSUMER_SECRET set", bool(os.getenv("XCHAT_CONSUMER_SECRET"))),
+                ("XCHAT_WEBHOOK_PUBLIC_URL set", bool(os.getenv("XCHAT_WEBHOOK_PUBLIC_URL"))),
+                (
+                    "Webhook URL is HTTPS",
+                    (os.getenv("XCHAT_WEBHOOK_PUBLIC_URL") or "").startswith("https://"),
+                ),
+                (
+                    "Webhook URL has no port",
+                    ":" not in (os.getenv("XCHAT_WEBHOOK_PUBLIC_URL") or "").replace(
+                        "https://", ""
+                    ).replace("http://", ""),
+                ),
+                (
+                    "Webhook URL is not localhost",
+                    "localhost" not in (os.getenv("XCHAT_WEBHOOK_PUBLIC_URL") or "")
+                    and "127.0.0.1" not in (os.getenv("XCHAT_WEBHOOK_PUBLIC_URL") or ""),
+                ),
+            ],
+            "next_steps": (
+                "xchat webhook register --url <your_https_url>\n"
+                "xchat webhook validate <webhook_id>\n"
+                "xchat subscriptions create --event-type chat.received --user-id <bot_user_id>"
+            ),
+        },
+    }
+
+    info = _SCENARIOS.get(scenario)
+    if not info:
+        console.print(
+            f"[yellow]Unknown scenario:[/yellow] {scenario!r}. "
+            "Available: public-smoke, chat-bot, webhook-prod"
+        )
+        return
+
+    console.print(
+        Panel(
+            f"[bold]{info['title']}[/bold]\n\n"
+            f"{info['description']}\n",
+            title=f"Scenario: {scenario}",
+            border_style="cyan",
+        )
+    )
+
+    checklist: list[tuple[str, bool]] = info["checklist"]  # type: ignore[assignment]
+    all_ok = True
+    for label, ok in checklist:
+        status = "[green]✓[/green]" if ok else "[red]✗[/red]"
+        console.print(f"  {status}  {label}")
+        if not ok:
+            all_ok = False
+
+    console.print()
+    if all_ok:
+        console.print("[green]All scenario prerequisites met.[/green]")
+    else:
+        console.print("[yellow]Some prerequisites missing — fix before proceeding.[/yellow]")
+
+    console.print(
+        Panel(
+            str(info["next_steps"]),
+            title="Next steps",
+            border_style="dim",
+        )
+    )
+    console.print()
+
+
 def _is_in_gitignore(pattern: str) -> bool:
     """Check if a pattern appears in .gitignore."""
     gitignore = Path(".gitignore")
@@ -249,11 +370,31 @@ def doctor(
     fix: bool = typer.Option(
         False, "--fix", help="Attempt to auto-fix simple issues (add to .gitignore)"
     ),
+    scenario: str | None = typer.Option(
+        None,
+        "--scenario",
+        help=(
+            "Check readiness for a specific use case. "
+            "Options: public-smoke, chat-bot, webhook-prod. "
+            "Prints a targeted checklist for that scenario."
+        ),
+    ),
 ) -> None:
     """Validate your environment and configuration.
 
     Checks Python version, uv, credentials, OAuth redirect URI,
     secret file protection, and more.
+
+    Use --scenario for targeted readiness checks:
+
+      xchat doctor --scenario public-smoke
+          Verify you can subscribe to profile.update.bio (no OAuth needed).
+
+      xchat doctor --scenario chat-bot
+          Verify you have OAuth user token + dm.read/dm.write scopes for XChat.
+
+      xchat doctor --scenario webhook-prod
+          Verify your webhook URL is public HTTPS, no port, not localhost.
     """
     # Load .env if present
     env_file = Path(".env")
@@ -266,6 +407,9 @@ def doctor(
             pass
 
     console.print("\n[bold]xchat doctor[/bold] — environment validation\n")
+
+    if scenario:
+        _print_scenario(scenario)
 
     results = _run_checks(check_connectivity=check_connectivity)
 

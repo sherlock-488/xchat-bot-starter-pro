@@ -61,32 +61,62 @@ uv sync
 
 # 2. Configure
 cp .env.example .env
-# Edit .env — minimum required fields for stream mode:
-#   XCHAT_OAUTH_CLIENT_ID=...     (OAuth 2.0 Client ID — DIFFERENT from API key,
-#                                  find it under Keys and tokens → OAuth 2.0)
-#   XCHAT_BEARER_TOKEN=...        (App Bearer Token — for Activity Stream)
-# Also required for webhook mode:
-#   XCHAT_CONSUMER_KEY=...        (X app API key — for webhook HMAC signing)
-#   XCHAT_CONSUMER_SECRET=...     (X app API secret)
+# Edit .env — set at minimum:
+#   XCHAT_OAUTH_CLIENT_ID=...   (OAuth 2.0 Client ID, find under Keys and tokens → OAuth 2.0)
+#   XCHAT_BEARER_TOKEN=...      (App Bearer Token — for Activity Stream)
+```
 
-# 3. Validate setup
-xchat doctor
+### Track A: Public smoke test (no OAuth needed)
 
-# 4. Authenticate (OAuth 2.0 PKCE — opens browser, saves user access token)
+Validate your XAA pipeline using `profile.update.bio` — a public event that
+requires no special OAuth scopes for the monitored user.
+
+```bash
+xchat doctor --scenario public-smoke
+
+xchat subscriptions create \
+  --event-type profile.update.bio \
+  --user-id <your_user_id> \
+  --tag "smoke test" \
+  --auth app
+
+xchat run --transport stream --crypto stub
+# Then change your bio on X and watch the event arrive in logs
+```
+
+### Track B: XChat private event bot
+
+For receiving and replying to XChat messages. Requires OAuth user token.
+
+```bash
+xchat doctor --scenario chat-bot
+
 xchat auth login
-# This writes XCHAT_USER_ACCESS_TOKEN to .env automatically.
+# Opens browser, saves XCHAT_USER_ACCESS_TOKEN to .env
 
-# 5. Subscribe to events (tells X which events to deliver to your bot)
-#    Find your bot's numeric user ID at: https://developer.x.com/en/docs/twitter-api/users/lookup
-xchat subscriptions create --user-id <your_bot_user_id> --event-type chat.received
-#
-#    Webhook mode only: register your public URL first, then subscribe
-#    xchat webhook register --url https://your-domain.com/webhook
-#    xchat subscriptions create --user-id <your_bot_user_id> --event-type chat.received
+xchat subscriptions create \
+  --event-type chat.received \
+  --user-id <bot_user_id> \
+  --auth user
 
-# 6. Run your first bot
-xchat run
-# Default bot: xchat_bot.examples.echo_bot:EchoBot (echoes every incoming DM)
+xchat run --transport stream --crypto stub
+# Default bot: xchat_bot.examples.echo_bot:EchoBot
+```
+
+### Webhook mode (production)
+
+```bash
+xchat doctor --scenario webhook-prod
+
+xchat webhook register --url https://your-domain.com/webhook
+xchat webhook validate <webhook_id>
+
+xchat subscriptions create \
+  --event-type chat.received \
+  --user-id <bot_user_id> \
+  --webhook-id <webhook_id>
+
+xchat run --transport webhook
 ```
 
 ---
