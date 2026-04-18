@@ -6,9 +6,18 @@ Authentication
 Sending DM replies requires the **OAuth 2.0 user access token** for the bot
 account (``XCHAT_USER_ACCESS_TOKEN``), obtained via ``xchat auth login``.
 This is different from the app Bearer Token used by the Activity Stream.
+App-only (Bearer Token) is not supported for DM sends.
 
-EXPERIMENTAL: The exact endpoint path and ``conversation_token`` field are
-observed from xchat-bot-python and may change when fully documented.
+Endpoint
+--------
+Uses the documented DM Manage v2 endpoint:
+  POST /2/dm_conversations/{conversation_id}/messages
+  Body: {"text": "..."}
+
+This endpoint is documented in X DM Manage API (docs.x.com/x-api/direct-messages).
+
+EXPERIMENTAL: The ``conversation_token`` field is observed from xchat-bot-python
+and is not yet in official docs. It is only included when explicitly passed.
 
 Features:
   - Automatic retry with exponential backoff (tenacity)
@@ -35,9 +44,11 @@ from xchat_bot.reply.adapter import ReplyResult
 
 logger = structlog.get_logger(__name__)
 
-# X v2 DM conversations endpoint.
-# EXPERIMENTAL: Exact path and body format observed from xchat-bot-python.
+# X v2 DM conversations endpoint — documented in X DM Manage API.
+# POST /2/dm_conversations/{conversation_id}/messages  body: {"text": "..."}
 _REPLY_ENDPOINT_TEMPLATE = "https://api.x.com/2/dm_conversations/{conversation_id}/messages"
+# One-to-one DM endpoint (by participant ID) — also documented.
+_DM_WITH_PARTICIPANT_TEMPLATE = "https://api.x.com/2/dm_conversations/with/{participant_id}/messages"
 _TOKEN_URL = "https://api.x.com/2/oauth2/token"
 
 
@@ -48,8 +59,11 @@ class XApiReplyAdapter:
     send messages on behalf of the bot account. On 401, attempts to refresh
     the access token using the stored refresh_token before giving up.
 
-    EXPERIMENTAL: Endpoint and ``conversation_token`` field observed from
-    xchat-bot-python; will be updated when official reply API is fully documented.
+    Default mode uses the documented DM Manage v2 endpoint:
+      POST /2/dm_conversations/{conversation_id}/messages
+
+    The ``conversation_token`` parameter is EXPERIMENTAL (observed from
+    xchat-bot-python, not yet in official docs) and is omitted by default.
 
     Args:
         settings: Application settings (provides user_access_token and retry config).
@@ -101,13 +115,14 @@ class XApiReplyAdapter:
 
         url = _REPLY_ENDPOINT_TEMPLATE.format(conversation_id=conversation_id)
 
-        # EXPERIMENTAL: Request body format observed from xchat-bot-python
+        # Documented DM Manage v2 body format
         body: dict[str, object] = {"text": text}
         if reply_to_event_id:
             body["reply_to_dm_event_id"] = reply_to_event_id
-        # conversation_token usage is EXPERIMENTAL — may be required for E2EE replies
+        # conversation_token: EXPERIMENTAL — observed from xchat-bot-python,
+        # not yet in official DM Manage docs. Only included when explicitly passed.
         if conversation_token:
-            body["conversation_token"] = conversation_token  # EXPERIMENTAL
+            body["conversation_token"] = conversation_token
 
         headers = {
             "Authorization": f"Bearer {self._current_token}",

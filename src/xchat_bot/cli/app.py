@@ -8,6 +8,7 @@ Usage:
     xchat auth login
     xchat webhook register --url https://...
     xchat subscriptions create --user-id <bot_user_id> --event-type chat.received
+    xchat dm send "hello" --participant-id 9876543210
     xchat run
 """
 
@@ -25,6 +26,7 @@ app = typer.Typer(
 # Import and register sub-commands
 from xchat_bot.cli import (  # noqa: E402
     cmd_auth,
+    cmd_dm,
     cmd_doctor,
     cmd_init,
     cmd_inspect,
@@ -36,6 +38,7 @@ from xchat_bot.cli import (  # noqa: E402
 )
 
 app.add_typer(cmd_auth.app, name="auth")
+app.add_typer(cmd_dm.app, name="dm")
 app.add_typer(cmd_replay.app, name="replay")
 app.add_typer(cmd_webhook.app, name="webhook")
 app.add_typer(cmd_subscriptions.app, name="subscriptions")
