@@ -411,6 +411,7 @@ def doctor(
 
     if scenario:
         _print_scenario(scenario)
+        return  # scenario mode shows targeted checklist only — skip full doctor run
 
     results = _run_checks(check_connectivity=check_connectivity)
 

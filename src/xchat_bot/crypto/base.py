@@ -33,7 +33,7 @@ class CryptoAdapter(Protocol):
             encoded_event: The encoded_event field from the observed XChat XAA payload,
                            or encrypted_content from the demo schema.
             encrypted_conversation_key: The encrypted_conversation_key from the
-                                        official XAA payload, if available.
+                                        observed XChat XAA payload, if available.
 
         Returns:
             DecryptResult with plaintext (or None on failure) and diagnostic notes.
