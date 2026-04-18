@@ -45,8 +45,10 @@ def test_parse_int_header_large_number():
 
 @pytest.fixture
 def settings_no_token() -> AppSettings:
-    """AppSettings without user_access_token."""
-    return AppSettings(
+    """AppSettings without user_access_token, isolated from local .env."""
+    from tests.conftest import make_isolated_settings
+
+    return make_isolated_settings(
         consumer_key="test_key",
         consumer_secret="test_secret",
         transport_mode="stream",

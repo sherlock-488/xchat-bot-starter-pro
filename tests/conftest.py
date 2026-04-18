@@ -20,6 +20,16 @@ from xchat_bot.reply.adapter import LoggingReplyAdapter, ReplyResult
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
+def make_isolated_settings(**kwargs: Any) -> AppSettings:
+    """Create AppSettings ignoring local .env — prevents real credentials leaking into tests."""
+
+    class _IsolatedSettings(AppSettings):
+        model_config = AppSettings.model_config.copy()
+        model_config["env_file"] = None  # type: ignore[index]
+
+    return _IsolatedSettings(**kwargs)
+
+
 @pytest.fixture(autouse=True)
 def reset_settings() -> None:
     """Clear settings cache before each test."""
@@ -28,8 +38,8 @@ def reset_settings() -> None:
 
 @pytest.fixture
 def mock_settings() -> AppSettings:
-    """Valid AppSettings for testing (no real credentials)."""
-    return AppSettings(
+    """Valid AppSettings for testing (no real credentials, isolated from local .env)."""
+    return make_isolated_settings(
         consumer_key="test_consumer_key",
         consumer_secret="test_consumer_secret",
         transport_mode="stream",
