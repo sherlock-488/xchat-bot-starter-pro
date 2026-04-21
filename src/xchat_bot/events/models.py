@@ -31,6 +31,10 @@ class EncryptedPayload(BaseModel):
     Fields from the observed XAA envelope (data.payload.*) are the primary
     source (inferred from xchat-bot-python; not yet fully in docs.x.com).
     Fields from the demo schema are labeled EXPERIMENTAL.
+
+    The following fields are preserved from observed chat.received payloads
+    and must NOT be decrypted by this starter — decryption requires chat-xdk
+    (pending stable public release).
     """
 
     # Observed XAA envelope fields (inferred from xchat-bot-python)
@@ -39,7 +43,7 @@ class EncryptedPayload(BaseModel):
         description=(
             "Base64-encoded encrypted message blob. "
             "From data.payload.encoded_event in the observed XAA envelope (xchat-bot-python). "
-            "Decrypted with XChaCha20-Poly1305 using the conversation key."
+            "Decrypted with XChaCha20-Poly1305 using the conversation key (requires chat-xdk)."
         ),
     )
     encrypted_conversation_key: str | None = Field(
@@ -52,6 +56,13 @@ class EncryptedPayload(BaseModel):
     conversation_key_version: str | None = Field(
         None,
         description="Key version string used to select the correct private key from state.json.",
+    )
+    conversation_key_change_event: str | None = Field(
+        None,
+        description=(
+            "Observed from chat.received payloads: opaque event blob for key rotation. "
+            "Preserved for chat-xdk processing — not decrypted by this starter."
+        ),
     )
 
     # Demo schema fields — EXPERIMENTAL

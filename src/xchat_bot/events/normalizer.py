@@ -80,14 +80,17 @@ class EventNormalizer:
         # chat.* events: extract encrypted XChat fields
         if event_type.startswith("chat."):
             conv_id = payload.get("conversation_id")
+            sender_id = payload.get("sender_id")
             encoded = payload.get("encoded_event")
             enc_key = payload.get("encrypted_conversation_key")
             key_ver = payload.get("conversation_key_version")
-            conv_token = payload.get("conversation_token")  # EXPERIMENTAL
+            key_change = payload.get("conversation_key_change_event")
+            conv_token = payload.get("conversation_token")
             encrypted = EncryptedPayload(
                 encoded_event=encoded,
                 encrypted_conversation_key=enc_key,
                 conversation_key_version=key_ver,
+                conversation_key_change_event=key_change,
             )
             # Prefer platform event_uuid; fall back to deterministic hash
             event_id = (
@@ -106,6 +109,7 @@ class EventNormalizer:
                 tag=tag,
                 payload=payload,
                 conversation_id=conv_id,
+                sender_id=sender_id,
                 encrypted=encrypted,
                 conversation_token=conv_token,
                 is_stub=is_stub,

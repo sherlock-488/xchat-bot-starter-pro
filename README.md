@@ -14,18 +14,33 @@ See [Status and Caveats](#️-status-and-caveats) before using in production.
 
 **This is not an official X / Twitter SDK.**
 
-This starter kit follows current official examples and documentation. Some XChat details are still observed rather than fully documented:
+This starter tracks documented routes and official migration guide endpoints.
+Real decrypt/encrypt requires chat-xdk (pending stable public release).
+`chat-api` mode expects already-encrypted payloads. `dm-v2` remains the
+documented plaintext DM Manage default. `xchat-observed` remains experimental.
 
-| Feature | Status |
-|---------|--------|
-| CRC challenge + webhook signature | ✅ Documented, stable |
-| OAuth 2.0 user token (reply) | ✅ Documented, stable |
-| App Bearer Token (stream) | ✅ Documented, stable |
-| DM v2 send (`POST /2/dm_conversations/…/messages`) | ✅ Documented, stable |
-| Activity Stream transport | ⚠️ Endpoint documented; reconnect params observed |
-| XChat reply extras (`conversation_token`, `reply_to_dm_event_id`) | ⚠️ EXPERIMENTAL — use `reply_mode="xchat-observed"` |
-| E2EE decryption | ⚠️ EXPERIMENTAL — chat-xdk not yet officially released |
-| `chat.*` event payload shape | ⚠️ `observed-xchat` — inferred from xchat-bot-python |
+| Area | Status |
+|------|--------|
+| X Activity stream / webhook | Documented |
+| profile.update.bio public smoke test | Documented |
+| chat.received subscription | Documented |
+| Chat API routes | Documented in official migration guide |
+| GET /2/users/{id}/public_keys | Documented |
+| GET /2/chat/conversations | Documented |
+| GET /2/chat/conversations/{conversation_id} | Documented |
+| POST /2/chat/conversations/{conversation_id}/messages | Documented encrypted send endpoint |
+| CRC challenge + webhook signature | Documented, stable |
+| OAuth 2.0 user token (reply) | Documented, stable |
+| App Bearer Token (stream) | Documented, stable |
+| DM v2 send (`POST /2/dm_conversations/…/messages`) | Documented, stable — default reply mode |
+| Activity Stream transport | Endpoint documented; reconnect params observed |
+| chat-xdk decrypt / encrypt | Pending stable public release |
+| Real plaintext XChat bot flow | Experimental |
+| Chat media upload | Coming soon / not yet in prod |
+| `conversation_token` in Chat conversation REST responses | Documented |
+| `conversation_token` in XAA `chat.received` delivery payloads | Observed / sample-driven |
+| `xchat-observed` reply extras (`reply_to_dm_event_id`, `conversation_token` in DM body) | EXPERIMENTAL — use `reply_mode="xchat-observed"` |
+| `chat.*` event payload shape | `observed-xchat` — inferred from xchat-bot-python |
 
 Fields and behaviors marked **EXPERIMENTAL** may change when official documentation is published. See [docs/known-caveats.md](docs/known-caveats.md) for the full list.
 

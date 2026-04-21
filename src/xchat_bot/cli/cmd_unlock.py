@@ -56,7 +56,8 @@ def unlock(
     console.print(f"\n[bold]xchat unlock[/bold] — writing to {state_file}")
     console.print(
         "[yellow]EXPERIMENTAL:[/yellow] This creates a placeholder state.json. "
-        "Real E2EE key retrieval is pending official API documentation."
+        "Full private-key recovery and decrypt require chat-xdk and remain experimental "
+        "until stable public tooling is available."
     )
     console.print()
 

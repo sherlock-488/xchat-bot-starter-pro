@@ -179,6 +179,27 @@ def create(
             "Proceeding anyway — the API may accept it."
         )
 
+    # chat.* event types only support user_id filter
+    if event_type.startswith("chat."):
+        if not user_id:
+            console.print(
+                f"[red]Error:[/red] '{event_type}' requires --user-id. "
+                "chat.* subscriptions only support user_id filter."
+            )
+            raise typer.Exit(code=1)
+        if keyword:
+            console.print(
+                f"[red]Error:[/red] --keyword is not supported for '{event_type}'. "
+                "chat.* subscriptions only support user_id filter."
+            )
+            raise typer.Exit(code=1)
+        if direction:
+            console.print(
+                f"[red]Error:[/red] --direction is not supported for '{event_type}'. "
+                "chat.* subscriptions only support user_id filter."
+            )
+            raise typer.Exit(code=1)
+
     headers = _auth_headers(auth, event_type)
 
     # Build filter

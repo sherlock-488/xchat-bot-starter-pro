@@ -2,9 +2,15 @@
 ReplyAdapter protocol — the interface for sending DM replies.
 
 Implementations:
-  - XApiReplyAdapter: sends replies via X API (EXPERIMENTAL)
+  - XApiReplyAdapter: sends replies via X API
   - NullReplyAdapter: discards replies (useful for read-only bots and testing)
   - LoggingReplyAdapter: logs replies without sending (useful for development)
+
+Reply modes (XApiReplyAdapter):
+  - dm-v2 (default): documented DM Manage v2 endpoint, body {"text": "..."}
+  - chat-api: documented Chat encrypted message endpoint — requires already-encrypted
+      payload fields produced by chat-xdk (pending stable public release)
+  - xchat-observed: EXPERIMENTAL observed XChat reply extras
 """
 
 from __future__ import annotations
@@ -22,6 +28,21 @@ class ReplyResult(BaseModel):
     error: str | None = None
     rate_limit_remaining: int | None = None
     rate_limit_reset: int | None = None
+
+
+class EncryptedReplyPayload(BaseModel):
+    """Already-encrypted payload for chat-api reply mode.
+
+    All fields must be produced by chat-xdk before passing to send_encrypted_reply().
+    This starter does NOT implement encryption — chat-xdk is pending stable public release.
+
+    Fields correspond to the POST /2/chat/conversations/{id}/messages body.
+    """
+
+    message_id: str
+    encoded_message_create_event: str
+    encoded_message_event_signature: str
+    conversation_token: str | None = None
 
 
 @runtime_checkable
